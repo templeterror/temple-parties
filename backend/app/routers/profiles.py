@@ -76,6 +76,29 @@ def ensure_profile(user: dict) -> dict:
     return created.data[0]
 
 
+def profile_is_onboarded(profile: dict) -> bool:
+    """True when the profile has the same required fields as /onboarding."""
+    username = profile.get("username")
+    school_year = profile.get("school_year")
+    return (
+        isinstance(username, str)
+        and bool(username.strip())
+        and isinstance(school_year, str)
+        and bool(school_year.strip())
+    )
+
+
+def require_onboarded(user: dict = Depends(require_auth)) -> dict:
+    """Product actions require username + school year — the same bar as /onboarding."""
+    profile = ensure_profile(user)
+    if not profile_is_onboarded(profile):
+        raise HTTPException(
+            status_code=403,
+            detail="Finish setting up your account first",
+        )
+    return user
+
+
 def _validate_username(username: str) -> str:
     cleaned = username.strip()
     if not _USERNAME_RE.match(cleaned):

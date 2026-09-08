@@ -29,3 +29,34 @@ export function voteCounts(
   const likeCount = Math.max(0, Math.min(ratingCount, Math.round((likePercentage / 100) * ratingCount)));
   return { likeCount, dislikeCount: ratingCount - likeCount };
 }
+
+/**
+ * Apply a 0/1 vote onto a like-percentage + count (demo sandbox, and any
+ * local overlay). Same-thumb is a no-op; switching moves the vote; a first
+ * vote bumps the total.
+ */
+export function applyUserRating(
+  likePercentage: number,
+  ratingCount: number,
+  previous: number | null | undefined,
+  next: number,
+): { likePercentage: number; ratingCount: number } {
+  if (next !== 0 && next !== 1) return { likePercentage, ratingCount };
+  if (previous === next) return { likePercentage, ratingCount };
+
+  const derived = voteCounts(likePercentage, ratingCount) ?? { likeCount: 0, dislikeCount: 0 };
+  let likeCount = derived.likeCount;
+  let total = ratingCount;
+
+  if (previous == null) {
+    total += 1;
+    if (next === 1) likeCount += 1;
+  } else if (previous === 1) {
+    likeCount = Math.max(0, likeCount - 1);
+  } else {
+    likeCount += 1;
+  }
+
+  const pct = total <= 0 ? 0 : Math.round((likeCount / total) * 100);
+  return { likePercentage: pct, ratingCount: total };
+}

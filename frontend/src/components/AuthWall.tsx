@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef } from 'react';
-import { usePathname, useSearchParams } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import LoginPanel from '@/components/LoginPanel';
 import Wordmark from '@/components/ui/Wordmark';
 import { loginPitch, sanitizeNextPath } from '@/lib/authHelpers';
@@ -14,16 +14,19 @@ import { peekPendingAuthAction } from '@/lib/pendingAuthAction';
  * Overlay uses backdrop-filter rather than filtering the page itself so
  * Leaflet maps keep their transform context (same reason StagePoster blurs
  * a static img, not the map).
+ *
+ * nextPath is read from window.location, not useSearchParams — that hook
+ * suspends, and AuthGate's Suspense fallback used to dump the live app
+ * unwalled (e.g. /leaderboards).
  */
 export default function AuthWall({ children }: { children: React.ReactNode }) {
   const pathname = usePathname() ?? '/';
-  const searchParams = useSearchParams();
   const lockedRef = useRef<HTMLDivElement>(null);
 
   const nextPath = useMemo(() => {
-    const search = searchParams.toString();
-    return sanitizeNextPath(search ? `${pathname}?${search}` : pathname);
-  }, [pathname, searchParams]);
+    if (typeof window === 'undefined') return sanitizeNextPath(pathname);
+    return sanitizeNextPath(`${window.location.pathname}${window.location.search}`);
+  }, [pathname]);
 
   const pitch = useMemo(
     () => loginPitch(nextPath, peekPendingAuthAction()?.type ?? null),

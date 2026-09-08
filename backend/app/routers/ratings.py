@@ -5,7 +5,8 @@ from slowapi import Limiter
 from app.rate_limit import client_ip_key
 from app.database import supabase
 from app.models.rating import RatingCreate, RatingResponse, PartyRankingResponse, HostRankingResponse
-from app.routers.auth import get_current_user, require_auth
+from app.routers.auth import get_current_user
+from app.routers.profiles import require_onboarded
 from app.routers.parties import _resolve_poster_image
 from app.services import weekend as weekend_service
 from app.constants import RATE_LIMITS
@@ -29,7 +30,7 @@ async def submit_rating(
     request: Request,
     party_id: str,
     data: RatingCreate,
-    user: dict = Depends(require_auth),
+    user: dict = Depends(require_onboarded),
 ):
     """
     Submit or update a rating for an approved party (auth required).

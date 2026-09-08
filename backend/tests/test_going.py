@@ -108,6 +108,34 @@ class TestMarkGoing:
         response = client.post(f"/parties/{mock_party['id']}/going")
         assert response.status_code == 401
 
+    def test_mark_going_requires_onboarding(
+        self, client, enforce_onboarding, mock_supabase, mock_user, mock_party
+    ):
+        mock_supabase.auth.get_user = MagicMock(
+            return_value=create_mock_auth_response(mock_user["id"], mock_user["email"])
+        )
+
+        def mock_table(table_name):
+            mock_tbl = MagicMock()
+            if table_name == "user_profiles":
+                mock_tbl.select.return_value.eq.return_value.execute.return_value = \
+                    create_mock_db_response([{
+                        "id": mock_user["id"],
+                        "email": mock_user["email"],
+                        "username": None,
+                        "school_year": None,
+                    }])
+            return mock_tbl
+
+        mock_supabase.table = mock_table
+
+        response = client.post(
+            f"/parties/{mock_party['id']}/going",
+            headers={"Authorization": "Bearer valid_token"},
+        )
+        assert response.status_code == 403
+        assert "account" in response.json()["detail"].lower()
+
 
 class TestUnmarkGoing:
     """Tests for DELETE /parties/{party_id}/going."""
@@ -177,11 +205,25 @@ class TestGetUserGoingParties:
         mock_supabase.auth.get_user = MagicMock(
             return_value=create_mock_auth_response(mock_user["id"], mock_user["email"])
         )
-        mock_supabase.table.return_value.select.return_value.eq.return_value.execute.return_value = \
-            create_mock_db_response([
-                {"party_id": party_ids[0]},
-                {"party_id": party_ids[1]},
-            ])
+
+        def mock_table(table_name):
+            mock_tbl = MagicMock()
+            if table_name == "user_profiles":
+                mock_tbl.select.return_value.eq.return_value.execute.return_value = \
+                    create_mock_db_response([{
+                        "id": mock_user["id"],
+                        "username": "testuser",
+                        "school_year": "2028",
+                    }])
+            elif table_name == "party_going":
+                mock_tbl.select.return_value.eq.return_value.execute.return_value = \
+                    create_mock_db_response([
+                        {"party_id": party_ids[0]},
+                        {"party_id": party_ids[1]},
+                    ])
+            return mock_tbl
+
+        mock_supabase.table = mock_table
 
         response = client.get(
             "/parties/user/going",
@@ -195,8 +237,22 @@ class TestGetUserGoingParties:
         mock_supabase.auth.get_user = MagicMock(
             return_value=create_mock_auth_response(mock_user["id"], mock_user["email"])
         )
-        mock_supabase.table.return_value.select.return_value.eq.return_value.execute.return_value = \
-            create_mock_db_response([])
+
+        def mock_table(table_name):
+            mock_tbl = MagicMock()
+            if table_name == "user_profiles":
+                mock_tbl.select.return_value.eq.return_value.execute.return_value = \
+                    create_mock_db_response([{
+                        "id": mock_user["id"],
+                        "username": "testuser",
+                        "school_year": "2028",
+                    }])
+            elif table_name == "party_going":
+                mock_tbl.select.return_value.eq.return_value.execute.return_value = \
+                    create_mock_db_response([])
+            return mock_tbl
+
+        mock_supabase.table = mock_table
 
         response = client.get(
             "/parties/user/going",

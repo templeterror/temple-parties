@@ -33,6 +33,7 @@ import { isLastSemesterChampion } from '@/lib/lastSemesterChampions';
 import { voteCounts } from '@/utils/ratingHelpers';
 import { displayDoorTime } from '@/utils/dateHelpers';
 import { openMapsDirections } from '../utils/shareHelpers';
+import { usePartyHref } from '@/contexts/DemoModeContext';
 
 /**
  * The shared data contract for both feed cards (compact + headliner).
@@ -98,6 +99,7 @@ function PartyCard({
   posterImage,
   onShowToast,
 }: FeedCardProps) {
+  const detailHref = usePartyHref(id);
   // Navigate always fires the page callback (which handles the login gate
   // and auto-RSVP); directions only open when we actually have an address.
   const handleNavigate = () => {
@@ -119,7 +121,7 @@ function PartyCard({
     <article className="relative flex w-full mb-3 bg-temple-surface-2 border border-white/10 rounded-[14px] overflow-hidden animate-slide-up-fade">
       {/* The whole-card tap target. Sits above all content (z-1); only the
           action row floats higher (z-2) to stay independently tappable. */}
-      <Link href={`/party/${id}`} className="absolute inset-0 z-[1]" aria-label={`View ${title}`}>
+      <Link href={detailHref} className="absolute inset-0 z-[1]" aria-label={`View ${title}`}>
         <span className="sr-only">View party</span>
       </Link>
 

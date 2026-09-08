@@ -7,6 +7,7 @@ import {
   loginPitch,
   microsoftCallbackUrl,
   onboardingPath,
+  partyHref,
   sanitizeNextPath,
 } from '@/lib/authHelpers';
 
@@ -89,6 +90,7 @@ describe('isAuthPublicPath', () => {
     expect(isAuthPublicPath('/onboarding')).toBe(true);
     expect(isAuthPublicPath('/demo')).toBe(true);
     expect(isAuthPublicPath('/demo/map')).toBe(true);
+    expect(isAuthPublicPath('/demo/party/demo-fri-headliner')).toBe(true);
   });
 
   it('walls the live app', () => {
@@ -97,6 +99,13 @@ describe('isAuthPublicPath', () => {
     expect(isAuthPublicPath('/party/abc')).toBe(false);
     expect(isAuthPublicPath('/leaderboards')).toBe(false);
     expect(isAuthPublicPath('/profile')).toBe(false);
+  });
+});
+
+describe('partyHref', () => {
+  it('keeps live party links on /party and demo links under /demo/party', () => {
+    expect(partyHref('abc', false)).toBe('/party/abc');
+    expect(partyHref('demo-fri-headliner', true)).toBe('/demo/party/demo-fri-headliner');
   });
 });
 

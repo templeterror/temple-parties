@@ -63,7 +63,21 @@ def client(mock_supabase):
     _otp_request_by_email._hits.clear()
     _otp_verify_by_email._hits.clear()
 
+    # Most tests mock `table.return_value` as a party row. require_onboarded
+    # would otherwise treat that row as a profile and 403. Skip the profile
+    # lookup here; tests that need the real gate use `enforce_onboarding`.
+    from fastapi import Depends
+    from app.routers.auth import require_auth
+    from app.routers.profiles import require_onboarded
+
+    def _skip_onboarding_check(user: dict = Depends(require_auth)):
+        return user
+
+    app.dependency_overrides[require_onboarded] = _skip_onboarding_check
+
     yield TestClient(app)
+
+    app.dependency_overrides.pop(require_onboarded, None)
 
     # Re-enable rate limiting after test
     limiter.enabled = True
@@ -73,6 +87,18 @@ def client(mock_supabase):
     ratings_limiter.enabled = True
     admin_limiter.enabled = True
     hosts_limiter.enabled = True
+
+
+@pytest.fixture
+def enforce_onboarding(client):
+    """Run require_onboarded for real (username + school year on the profile)."""
+    from app.main import app
+    from app.routers.profiles import require_onboarded
+
+    saved = app.dependency_overrides.pop(require_onboarded, None)
+    yield
+    if saved is not None:
+        app.dependency_overrides[require_onboarded] = saved
 
 
 @pytest.fixture

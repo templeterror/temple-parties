@@ -14,6 +14,7 @@ import { memo } from 'react';
 import { PartyRanking } from '@/lib/types';
 import { formatShortDate } from '@/utils/dateHelpers';
 import VoteArrow from '@/components/ui/VoteArrow';
+import { usePartyHref } from '@/contexts/DemoModeContext';
 
 /** Medal colors for the podium ranks; everyone else stays muted. */
 export function rankColor(rank: number): string {
@@ -46,8 +47,9 @@ interface RankingRowProps {
 }
 
 function RankingRow({ rank, party, isBelowThreshold }: RankingRowProps) {
+  const detailHref = usePartyHref(party.id);
   return (
-    <Link href={`/party/${party.id}`} className="block mb-3">
+    <Link href={detailHref} className="block mb-3">
       <article
         className={`flex items-center gap-4 bg-temple-surface-2 border border-white/10 rounded-[14px] px-4 py-3.5 transition-colors hover:border-white/20 ${
           isBelowThreshold ? 'opacity-60' : ''

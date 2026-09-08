@@ -1126,7 +1126,13 @@ class TestHostOrgIdentity:
             mock_tbl = MagicMock()
             if table_name == "user_profiles":
                 mock_tbl.select.return_value.eq.return_value.execute.return_value = \
-                    create_mock_db_response([{"id": mock_user["id"], "is_admin": False, "is_host": True}])
+                    create_mock_db_response([{
+                        "id": mock_user["id"],
+                        "username": "testuser",
+                        "school_year": "2028",
+                        "is_admin": False,
+                        "is_host": True,
+                    }])
             elif table_name == "host_applications":
                 mock_tbl.select.return_value.eq.return_value.eq.return_value \
                     .order.return_value.limit.return_value.execute.return_value = \

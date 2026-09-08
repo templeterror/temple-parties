@@ -16,6 +16,7 @@ def _profile(mock_user, **overrides):
         "id": mock_user["id"],
         "email": mock_user["email"],
         "username": "owl",
+        "school_year": "2028",
         "is_admin": False,
         "is_host": False,
         "created_at": "2026-08-01T00:00:00",

@@ -1,119 +1,88 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
+import { usePathname } from 'next/navigation';
 import Header from '@/components/Header';
 import MapView from '@/components/MapView';
-import RatingModal from '@/components/RatingModal';
 import Toast from '@/components/Toast';
 import AppShell from '@/components/AppShell';
 import DemoBanner from '@/components/DemoBanner';
-import { getDefaultDay } from '@/utils/dateHelpers';
-import type { PartyDay } from '@/lib/types';
-import useGoingStatus from '@/hooks/useGoingStatus';
-import useRatingStatus from '@/hooks/useRatingStatus';
-import useParties from '@/hooks/useParties';
 import useToast from '@/hooks/useToast';
-import useAddressVisibility from '@/hooks/useAddressVisibility';
-import { useDemoWeekend } from '@/hooks/useDemoWeekend';
+import { useDemoSession } from '@/contexts/DemoSessionContext';
 import { trackEvent } from '@/utils/analytics';
 
 export default function DemoMapPage() {
-  const demoWeekend = useDemoWeekend();
-  const [selectedDay] = useState<PartyDay>(() => getDefaultDay());
-  const [ratingModalParty, setRatingModalParty] = useState<{ id: string; title: string; host: string } | null>(null);
+  const pathname = usePathname();
+  const [focusPartyId, setFocusPartyId] = useState<string | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
 
-  const { goingParties, isGoing, getCount, toggleGoing, ensureGoing } = useGoingStatus({ readOnly: true });
-  const { getUserRating, getLikePercentage, getRatingCount, submitRating } = useRatingStatus({ readOnly: true });
-  const { revealAddress } = useAddressVisibility();
-  const { allParties, topPartyIds, thursdayDate, fridayDate, saturdayDate, isLoadingParties } = useParties(
-    selectedDay,
-    getCount,
-    demoWeekend,
-  );
+  const {
+    weekendOf,
+    thursdayDate,
+    fridayDate,
+    saturdayDate,
+    demoNow,
+    parties,
+    goingParties,
+    isGoing,
+    toggleGoing,
+    ensureGoing,
+    topPartyIds,
+  } = useDemoSession();
+
   const toast = useToast();
-  const showToast = toast.show;
 
-  const handleGoingClick = useCallback(async (partyId: string) => {
-    revealAddress(partyId);
-    const wasGoing = isGoing(partyId);
-    await toggleGoing(partyId);
-    trackEvent('going_toggled', { partyId, action: wasGoing ? 'unmarked' : 'marked', demo: true, source: 'map' });
-  }, [toggleGoing, isGoing, revealAddress]);
+  useEffect(() => {
+    setFocusPartyId(new URLSearchParams(window.location.search).get('party'));
+    setSheetOpen(false);
+  }, [pathname]);
 
-  const handleNavigateClick = useCallback((partyId: string) => {
-    revealAddress(partyId);
-    void ensureGoing(partyId);
-    trackEvent('navigate_clicked', { partyId, demo: true, source: 'map' });
-  }, [ensureGoing, revealAddress]);
+  const handleGoingClick = useCallback(
+    (partyId: string) => {
+      const wasGoing = isGoing(partyId);
+      toggleGoing(partyId);
+      trackEvent('going_toggled', {
+        partyId,
+        action: wasGoing ? 'unmarked' : 'marked',
+        demo: true,
+        source: 'map',
+      });
+    },
+    [toggleGoing, isGoing],
+  );
 
-  const handleStarClick = useCallback((partyId: string, title: string, host: string, ratingActive: boolean, ratingLocked: boolean) => {
-    if (!ratingActive) {
-      showToast('Ratings unlock when doors open');
-      return;
-    }
-    if (ratingLocked) {
-      showToast('Ratings are now closed');
-      return;
-    }
-    setRatingModalParty({ id: partyId, title, host });
-  }, [showToast]);
-
-  const handleModalRate = useCallback(async (rating: number) => {
-    if (!ratingModalParty) return;
-    await submitRating(ratingModalParty.id, rating);
-    trackEvent('party_rated', { partyId: ratingModalParty.id, rating, source: 'map_modal', demo: true });
-  }, [ratingModalParty, submitRating]);
-
-  const handleSheetOpenChange = useCallback((open: boolean) => {
-    setSheetOpen(open);
-  }, []);
+  const handleNavigateClick = useCallback(
+    (partyId: string) => {
+      ensureGoing(partyId);
+      trackEvent('navigate_clicked', { partyId, demo: true, source: 'map' });
+    },
+    [ensureGoing],
+  );
 
   return (
     <AppShell mapMode hideBottomNav={sheetOpen}>
       <div className="h-screen lg:h-[calc(100vh-4rem)] flex flex-col">
         <Header title="Party Map" />
-        <DemoBanner weekendOf={demoWeekend} />
+        <DemoBanner weekendOf={weekendOf} />
         <div className={`flex-1 lg:pb-0 ${sheetOpen ? '' : 'pb-20'}`}>
-          {isLoadingParties ? (
-            <div className="flex justify-center items-center h-full">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-500" />
-            </div>
-          ) : (
-            <MapView
-              parties={allParties}
-              topPartyIds={topPartyIds}
-              userGoingParties={goingParties}
-              onGoingClick={handleGoingClick}
-              onNavigateClick={handleNavigateClick}
-              onRateClick={handleStarClick}
-              thursdayDate={thursdayDate}
-              fridayDate={fridayDate}
-              saturdayDate={saturdayDate}
-              onSheetOpenChange={handleSheetOpenChange}
-            />
-          )}
+          <MapView
+            parties={parties}
+            topPartyIds={topPartyIds}
+            userGoingParties={goingParties}
+            onGoingClick={handleGoingClick}
+            onNavigateClick={handleNavigateClick}
+            onRateClick={() => undefined}
+            thursdayDate={thursdayDate}
+            fridayDate={fridayDate}
+            saturdayDate={saturdayDate}
+            focusPartyId={focusPartyId}
+            onSheetOpenChange={setSheetOpen}
+            now={demoNow}
+          />
         </div>
       </div>
 
-      {ratingModalParty && (
-        <RatingModal
-          isOpen={!!ratingModalParty}
-          onClose={() => setRatingModalParty(null)}
-          partyTitle={ratingModalParty.title}
-          partyHost={ratingModalParty.host}
-          likePercentage={getLikePercentage(ratingModalParty.id, 0)}
-          ratingCount={getRatingCount(ratingModalParty.id, 0)}
-          userRating={getUserRating(ratingModalParty.id)}
-          onRate={handleModalRate}
-        />
-      )}
-
-      <Toast
-        message={toast.message}
-        isVisible={toast.isVisible}
-        onClose={toast.hide}
-      />
+      <Toast message={toast.message} isVisible={toast.isVisible} onClose={toast.hide} />
     </AppShell>
   );
 }

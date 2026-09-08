@@ -18,6 +18,8 @@ interface MapViewProps {
   focusPartyId?: string | null;
   /** Fires when the pin drawer opens or closes so the page can hide the tab bar. */
   onSheetOpenChange?: (open: boolean) => void;
+  /** Override "now" so the demo clock can freeze pin phase / default day. */
+  now?: Date;
 }
 
 // Loading placeholder

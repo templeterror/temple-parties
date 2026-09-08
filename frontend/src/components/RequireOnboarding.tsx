@@ -8,7 +8,7 @@ import { onboardingPath } from '@/lib/authHelpers';
 
 /**
  * Sends authenticated-but-incomplete users to /onboarding.
- * Mount inside AppShell pages (home, map, leaderboards, party, profile already gates itself).
+ * Mount inside AppShell pages (home, map, leaderboards, party). Profile/create/host gate themselves.
  */
 export default function RequireOnboarding({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading, needsOnboarding } = useAuth();

@@ -19,8 +19,8 @@ from app.models.party import (
     CreateWeekendOptionsResponse,
     WeekendOption,
 )
-from app.routers.auth import get_current_user, require_auth
-from app.routers.profiles import ensure_profile
+from app.routers.auth import get_current_user
+from app.routers.profiles import ensure_profile, require_onboarded
 from app.routers.hosts import require_host_poster
 from app.services.geocoding import geocode_address, suggest_addresses
 from app.services import weekend as weekend_service
@@ -278,7 +278,7 @@ async def get_parties(
 
 
 @router.get("/user/going", response_model=List[str])
-async def get_user_going_parties(user: dict = Depends(require_auth)):
+async def get_user_going_parties(user: dict = Depends(require_onboarded)):
     """
     Get list of party IDs that the current user is going to.
     """
@@ -355,7 +355,7 @@ async def get_demo_weekend():
 
 
 @router.get("/create-options", response_model=CreateWeekendOptionsResponse)
-async def get_create_options(user: dict = Depends(require_auth)):
+async def get_create_options(user: dict = Depends(require_onboarded)):
     """
     Future (and in-progress Saturday) weekends for the create-party picker.
     Browse `GET /parties` weekend meta can be a *past* Friday on Mon — never use that for create.
@@ -382,7 +382,7 @@ async def get_create_options(user: dict = Depends(require_auth)):
 async def address_suggest(
     request: Request,
     q: str = Query(..., min_length=3, max_length=200),
-    user: dict = Depends(require_auth),
+    user: dict = Depends(require_onboarded),
 ):
     """
     Autocomplete addresses near Temple via server-side Nominatim.
@@ -394,7 +394,7 @@ async def address_suggest(
 
 
 @router.get("/mine", response_model=List[PartyResponse])
-async def get_my_parties(user: dict = Depends(require_auth)):
+async def get_my_parties(user: dict = Depends(require_onboarded)):
     """
     Listings created by the current user (pending / approved / rejected).
     Must be registered before GET /{party_id} so "mine" is not captured as an id.
@@ -414,7 +414,7 @@ async def get_my_parties(user: dict = Depends(require_auth)):
 async def upload_poster(
     request: Request,
     file: UploadFile = File(...),
-    user: dict = Depends(require_auth),
+    user: dict = Depends(require_onboarded),
 ):
     """
     Mediated poster upload (Epic 8.1): client sends an image; backend writes to
@@ -485,7 +485,7 @@ async def get_party(
 
 @router.post("", response_model=PartyResponse)
 @limiter.limit(RATE_LIMITS["create_party"])
-async def create_party(request: Request, data: PartyCreate, user: dict = Depends(require_auth)):
+async def create_party(request: Request, data: PartyCreate, user: dict = Depends(require_onboarded)):
     """
     Create a new party. Status will be 'pending' until admin approves.
     Rate limited to 10 requests per minute per IP.
@@ -635,7 +635,7 @@ async def update_party(
     request: Request,
     party_id: str,
     data: PartyUpdate,
-    user: dict = Depends(require_auth),
+    user: dict = Depends(require_onboarded),
 ):
     """
     Owner edit. Pending and approved only — rejected listings stay frozen.
@@ -721,7 +721,7 @@ async def update_party(
 
 @router.delete("/{party_id}")
 @limiter.limit(RATE_LIMITS["delete_party"])
-async def delete_party(request: Request, party_id: str, user: dict = Depends(require_auth)):
+async def delete_party(request: Request, party_id: str, user: dict = Depends(require_onboarded)):
     """
     Delete a party. Only the creator can delete their party.
     """
@@ -743,7 +743,7 @@ async def delete_party(request: Request, party_id: str, user: dict = Depends(req
 
 @router.post("/{party_id}/going")
 @limiter.limit(RATE_LIMITS["toggle_going_auth"])
-async def mark_going(request: Request, party_id: str, user: dict = Depends(require_auth)):
+async def mark_going(request: Request, party_id: str, user: dict = Depends(require_onboarded)):
     """
     Mark the current user as going to a party (idempotent).
     going_count is maintained by the DB trigger from party_going rows.
@@ -785,7 +785,7 @@ async def mark_going(request: Request, party_id: str, user: dict = Depends(requi
 
 @router.delete("/{party_id}/going")
 @limiter.limit(RATE_LIMITS["toggle_going_auth"])
-async def unmark_going(request: Request, party_id: str, user: dict = Depends(require_auth)):
+async def unmark_going(request: Request, party_id: str, user: dict = Depends(require_onboarded)):
     """
     Remove the current user from a party's going list (idempotent).
     going_count is maintained by the DB trigger from party_going rows.

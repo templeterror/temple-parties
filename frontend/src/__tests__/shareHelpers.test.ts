@@ -45,6 +45,12 @@ describe('formatPartyShareText', () => {
     expect(text).toContain('https://tuparties.com/party/790c82f0-7a6b-4edb-ba41-95de642d5abc');
     expect(text.match(/https:\/\/tuparties\.com/g)).toHaveLength(1);
   });
+
+  it('uses a demo path when one is passed so shares never hit the live party URL', () => {
+    const text = formatPartyShareText(party, '/demo/party/demo-fri-headliner');
+    expect(text).toContain('https://tuparties.com/demo/party/demo-fri-headliner');
+    expect(text).not.toContain('/party/790c82f0');
+  });
 });
 
 describe('copyTextSync', () => {

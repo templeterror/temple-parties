@@ -65,4 +65,22 @@ describe('AuthGate', () => {
     expect(screen.getByText('feed content')).toBeInTheDocument();
     expect(screen.queryByRole('dialog')).toBeNull();
   });
+
+  it('does not render the live app until onboarding is finished', () => {
+    mockUseAuth.mockReturnValue({
+      isAuthenticated: true,
+      isLoading: false,
+      needsOnboarding: true,
+      signInWithMicrosoft: jest.fn(),
+    });
+
+    render(
+      <AuthGate>
+        <p>feed content</p>
+      </AuthGate>
+    );
+
+    expect(screen.queryByText('feed content')).toBeNull();
+    expect(screen.queryByRole('dialog')).toBeNull();
+  });
 });
