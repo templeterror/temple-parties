@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import RankingsView from '@/components/RankingsView';
 import AppShell from '@/components/AppShell';
 import PageSkeleton from '@/components/PageSkeleton';
+import RequireOnboarding from '@/components/RequireOnboarding';
 import { parseRankingsFilter, type RankingsFilter } from '@/components/RankingsDropdown';
 
 export default function LeaderboardsPage() {
@@ -28,7 +29,9 @@ export default function LeaderboardsPage() {
 
   return (
     <AppShell>
-      <RankingsView initialFilter={initialFilter} />
+      <RequireOnboarding>
+        <RankingsView initialFilter={initialFilter} />
+      </RequireOnboarding>
     </AppShell>
   );
 }

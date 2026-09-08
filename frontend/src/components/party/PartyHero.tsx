@@ -15,9 +15,11 @@ import StagePoster from '@/components/ui/StagePoster';
 interface PartyHeroProps {
   posterImage?: string;
   title: string;
+  /** Where the back arrow lands. Live party page → home; demo → /demo. */
+  backHref?: string;
 }
 
-export default function PartyHero({ posterImage, title }: PartyHeroProps) {
+export default function PartyHero({ posterImage, title, backHref = '/' }: PartyHeroProps) {
   const router = useRouter();
 
   return (
@@ -25,7 +27,7 @@ export default function PartyHero({ posterImage, title }: PartyHeroProps) {
       <div className="flex items-center px-4 h-14">
         <button
           type="button"
-          onClick={() => router.push('/')}
+          onClick={() => router.push(backHref)}
           aria-label="Go back"
           className="size-9 flex items-center justify-center rounded-full bg-black/60 text-white text-[18px] hover:bg-black/80 transition-colors"
         >

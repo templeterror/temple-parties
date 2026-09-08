@@ -5,8 +5,7 @@ import { PartyDay, PARTY_DAYS } from '@/lib/types';
  * On a party night (Thu/Fri/Sat, with 6 AM rollover) show that night;
  * otherwise show Thursday — the first night of the weekend.
  */
-export function getDefaultDay(): PartyDay {
-  const now = new Date();
+export function getDefaultDay(now: Date = new Date()): PartyDay {
   let dayOfWeek = now.getDay(); // 0 = Sunday, 6 = Saturday
 
   // Before 6 AM, treat as previous day (parties run past midnight)

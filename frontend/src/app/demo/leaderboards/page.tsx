@@ -3,15 +3,15 @@
 import RankingsView from '@/components/RankingsView';
 import AppShell from '@/components/AppShell';
 import DemoBanner from '@/components/DemoBanner';
-import { useDemoWeekend } from '@/hooks/useDemoWeekend';
+import { useDemoSession } from '@/contexts/DemoSessionContext';
 
 export default function DemoLeaderboardsPage() {
-  const demoWeekend = useDemoWeekend();
+  const { weekendOf, partyRankings, hostRankings } = useDemoSession();
 
   return (
     <AppShell>
-      <DemoBanner weekendOf={demoWeekend} />
-      <RankingsView weekendOverride={demoWeekend} />
+      <DemoBanner weekendOf={weekendOf} />
+      <RankingsView snapshotParties={partyRankings} snapshotHosts={hostRankings} />
     </AppShell>
   );
 }

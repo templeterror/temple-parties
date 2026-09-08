@@ -22,13 +22,13 @@ export function formatPartyShareCaption(party: Party): string {
   return lines.join('\n');
 }
 
-function partyUrl(party: Party): string {
-  return `${APP_URL}/party/${party.id}`;
+function partyShareUrl(party: Party, path?: string): string {
+  return `${APP_URL}${path ?? `/party/${party.id}`}`;
 }
 
 /** Clipboard / fallback: caption + the link once. */
-export function formatPartyShareText(party: Party): string {
-  return `${formatPartyShareCaption(party)}\n\n${partyUrl(party)}`;
+export function formatPartyShareText(party: Party, path?: string): string {
+  return `${formatPartyShareCaption(party)}\n\n${partyShareUrl(party, path)}`;
 }
 
 /**
@@ -84,22 +84,25 @@ function isAppleTouchDevice(): boolean {
  * iPhone/iPad: title+text+url throws TypeError. title+url opens the
  * native drawer (Messages, Instagram, etc.) and iMessage unfurls the URL.
  */
-export function webShareData(party?: Party): WebShareData {
-  const url = party ? partyUrl(party) : APP_URL;
+export function webShareData(party?: Party, path?: string): WebShareData {
+  const url = party ? partyShareUrl(party, path) : APP_URL;
   if (!party) return { title: 'Temple Parties', url };
   if (isAppleTouchDevice()) return { title: party.title, url };
   return { title: party.title, text: formatPartyShareCaption(party), url };
 }
 
+export type ShareOptions = { path?: string };
+
 /**
  * Native share sheet when the browser has one (iOS / Android / Safari).
  * Desktop Chrome has no sheet — copy the caption + link instead.
  */
-export async function shareContent(party?: Party): Promise<ShareResult> {
-  const url = party ? partyUrl(party) : APP_URL;
+export async function shareContent(party?: Party, options?: ShareOptions): Promise<ShareResult> {
+  const path = options?.path;
+  const url = party ? partyShareUrl(party, path) : APP_URL;
 
   if (typeof navigator.share === 'function') {
-    const data = webShareData(party);
+    const data = webShareData(party, path);
     if (!navigator.canShare || navigator.canShare(data)) {
       try {
         await navigator.share(data);
@@ -112,7 +115,7 @@ export async function shareContent(party?: Party): Promise<ShareResult> {
     }
   }
 
-  const ok = await copyText(party ? formatPartyShareText(party) : url);
+  const ok = await copyText(party ? formatPartyShareText(party, path) : url);
   return { success: ok, method: 'clipboard' };
 }
 

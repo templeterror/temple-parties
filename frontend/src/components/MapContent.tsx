@@ -32,8 +32,9 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { openMapsDirections, shareContent } from '@/utils/shareHelpers';
 import { trackEvent } from '@/utils/analytics';
-import { partyPath } from '@/lib/authHelpers';
+import { partyHref } from '@/lib/authHelpers';
 import { partiesApi } from '@/services/api';
+import { useDemoMode } from '@/contexts/DemoModeContext';
 import SegmentedTabs from '@/components/ui/SegmentedTabs';
 import NavigateIcon from '@/components/ui/NavigateIcon';
 import PartySheet from '@/components/map/PartySheet';
@@ -53,6 +54,7 @@ interface MapContentProps {
   focusPartyId?: string | null;
   /** Fires when the pin drawer opens or closes so the page can hide the tab bar. */
   onSheetOpenChange?: (open: boolean) => void;
+  now?: Date;
 }
 
 // Temple University campus center — where the map opens (zoom 15). Sits
@@ -278,9 +280,11 @@ function getShortAddress(address: string | null): string {
 
 // onRateClick stays in the props contract (pages still pass it) but rating
 // went read-only on the map with the v2 redesign — it happens on the party page.
-export default function MapContent({ parties, topPartyIds, userGoingParties, onGoingClick, onNavigateClick, thursdayDate, fridayDate, saturdayDate, focusPartyId, onSheetOpenChange }: MapContentProps) {
+export default function MapContent({ parties, topPartyIds, userGoingParties, onGoingClick, onNavigateClick, thursdayDate, fridayDate, saturdayDate, focusPartyId, onSheetOpenChange, now: nowProp }: MapContentProps) {
   const router = useRouter();
-  const [selectedDay, setSelectedDay] = useState<PartyDay>(getDefaultDay);
+  const demo = useDemoMode();
+  const clock = nowProp ?? new Date();
+  const [selectedDay, setSelectedDay] = useState<PartyDay>(() => getDefaultDay(nowProp ?? new Date()));
   const iconCacheRef = useRef<Map<string, L.DivIcon>>(new Map());
   const sheetRef = useRef<HTMLDivElement>(null);
   const [focusConsumed, setFocusConsumed] = useState(false);
@@ -323,7 +327,7 @@ export default function MapContent({ parties, topPartyIds, userGoingParties, onG
   }, [closeSheet]);
 
   useEffect(() => {
-    if (!selectedPartyId || detailById[selectedPartyId]) return;
+    if (demo || !selectedPartyId || detailById[selectedPartyId]) return;
     let cancelled = false;
     partiesApi
       .getParty(selectedPartyId)
@@ -337,7 +341,7 @@ export default function MapContent({ parties, topPartyIds, userGoingParties, onG
     return () => {
       cancelled = true;
     };
-  }, [selectedPartyId, detailById]);
+  }, [demo, selectedPartyId, detailById]);
 
   // If the selected party drops out of the list (realtime removal, weekend
   // rollover) the sheet has nothing to show — close it.
@@ -363,13 +367,13 @@ export default function MapContent({ parties, topPartyIds, userGoingParties, onG
 
     const hasDeepLink = Boolean(focusPartyId && parties.some((p) => p.id === focusPartyId));
     if (!hasDeepLink) {
-      setSelectedDay(pickSmartDefaultDay(getDefaultDay(), {
+      setSelectedDay(pickSmartDefaultDay(getDefaultDay(nowProp ?? new Date()), {
         thursday: thursdayCount,
         friday: fridayCount,
         saturday: saturdayCount,
       }));
     }
-  }, [parties, thursdayCount, fridayCount, saturdayCount, focusPartyId]);
+  }, [parties, thursdayCount, fridayCount, saturdayCount, focusPartyId, nowProp]);
 
   useEffect(() => {
     if (!deepLinkParty) return;
@@ -407,14 +411,14 @@ export default function MapContent({ parties, topPartyIds, userGoingParties, onG
   const openPartyPage = useCallback((via: 'tap' | 'swipe_up') => {
     if (!sheetParty) return;
     trackEvent('map_sheet_tapped', { partyId: sheetParty.id, partyTitle: sheetParty.title, via });
-    router.push(partyPath(sheetParty.id));
-  }, [sheetParty, router]);
+    router.push(partyHref(sheetParty.id, demo));
+  }, [sheetParty, router, demo]);
 
   const handleShare = useCallback(async () => {
     if (!sheetParty) return;
-    const result = await shareContent(sheetParty);
+    const result = await shareContent(sheetParty, demo ? { path: partyHref(sheetParty.id, true) } : undefined);
     trackEvent('party_shared', { method: result.method, success: result.success, partyId: sheetParty.id, surface: 'map_sheet' });
-  }, [sheetParty]);
+  }, [sheetParty, demo]);
 
   // Local const so TS narrowing (sponsor && ...) survives into the marker's
   // event-handler closures — imported bindings don't narrow across closures.
@@ -431,7 +435,7 @@ export default function MapContent({ parties, topPartyIds, userGoingParties, onG
 
   const sheetOpen = selectedPartyId !== null;
   const chipsOn = showHostChip(zoom);
-  const now = new Date();
+  const now = clock;
 
   return (
     <div className="w-full h-full relative" style={{ touchAction: 'none' }}>

@@ -7,8 +7,7 @@ from app.rate_limit import client_ip_key
 from app.constants import RATE_LIMITS
 from app.database import supabase
 from app.models.host import HostApplicationCreate, HostApplicationResponse, HostMeResponse
-from app.routers.auth import require_auth
-from app.routers.profiles import ensure_profile, _validate_instagram
+from app.routers.profiles import ensure_profile, require_onboarded, _validate_instagram
 
 router = APIRouter(prefix="/hosts", tags=["hosts"])
 limiter = Limiter(key_func=client_ip_key)
@@ -47,7 +46,7 @@ def require_host_poster(user: dict) -> dict:
 
 
 @router.get("/me", response_model=HostMeResponse)
-async def get_my_host_status(user: dict = Depends(require_auth)):
+async def get_my_host_status(user: dict = Depends(require_onboarded)):
     """Current host flag plus the latest application, if any."""
     profile = ensure_profile(user)
     result = (
@@ -70,7 +69,7 @@ async def get_my_host_status(user: dict = Depends(require_auth)):
 async def apply_to_host(
     request: Request,
     data: HostApplicationCreate,
-    user: dict = Depends(require_auth),
+    user: dict = Depends(require_onboarded),
 ):
     """
     Submit a host application. Proof is an Instagram DM to @tuparties (manual).

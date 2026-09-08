@@ -40,28 +40,32 @@ interface RankingsViewProps {
   weekendOverride?: string;
   /** Deep-link from /leaderboards?filter=by-hosts (TUP-12 hotfix). */
   initialFilter?: RankingsFilter;
+  /** When set, skip live APIs and show this frozen list (demo sandbox). */
+  snapshotParties?: PartyRanking[];
+  snapshotHosts?: HostRanking[];
 }
 
-export default function RankingsView({ weekendOverride, initialFilter }: RankingsViewProps = {}) {
+export default function RankingsView({ weekendOverride, initialFilter, snapshotParties, snapshotHosts }: RankingsViewProps = {}) {
+  const isSnapshot = snapshotParties != null;
   const [selectedFilter, setSelectedFilter] = useState<RankingsFilter>(
-    weekendOverride ? 'last-week' : (initialFilter ?? 'this-semester'),
+    weekendOverride || isSnapshot ? 'last-week' : (initialFilter ?? 'this-semester'),
   );
-  const [partyRankings, setPartyRankings] = useState<PartyRanking[]>([]);
-  const [hostRankings, setHostRankings] = useState<HostRanking[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [fetchedPartyRankings, setFetchedPartyRankings] = useState<PartyRanking[]>([]);
+  const [fetchedHostRankings, setFetchedHostRankings] = useState<HostRanking[]>([]);
+  const [isLoading, setIsLoading] = useState(!isSnapshot);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [infoOpen, setInfoOpen] = useState(false);
   // Authoritative current weekend from GET /parties (fixes §8.11 mislabel).
   const [currentWeekendOf, setCurrentWeekendOf] = useState<string | null>(null);
 
   useEffect(() => {
-    if (weekendOverride) return;
+    if (weekendOverride || isSnapshot) return;
     let cancelled = false;
     partiesApi.getParties().then((data) => {
       if (!cancelled) setCurrentWeekendOf(data.weekendOf);
     }).catch(() => {});
     return () => { cancelled = true; };
-  }, [weekendOverride]);
+  }, [weekendOverride, isSnapshot]);
 
   const lastWeekendOf = weekendOverride
     ?? (currentWeekendOf ? previousFridayISO(currentWeekendOf) : null);
@@ -85,6 +89,7 @@ export default function RankingsView({ weekendOverride, initialFilter }: Ranking
   }, [selectedFilter, lastWeekendOf]);
 
   useEffect(() => {
+    if (isSnapshot) return;
     if (!fetchSpec) return;
     let cancelled = false;
 
@@ -93,10 +98,10 @@ export default function RankingsView({ weekendOverride, initialFilter }: Ranking
       try {
         if (fetchSpec.mode === 'parties') {
           const data = await ratingsApi.getRankings(fetchSpec.params);
-          if (!cancelled) setPartyRankings(data);
+          if (!cancelled) setFetchedPartyRankings(data);
         } else {
           const data = await ratingsApi.getHostRankings();
-          if (!cancelled) setHostRankings(data);
+          if (!cancelled) setFetchedHostRankings(data);
         }
       } catch (error) {
         console.error('Failed to fetch rankings:', error);
@@ -107,7 +112,10 @@ export default function RankingsView({ weekendOverride, initialFilter }: Ranking
 
     fetchRankings();
     return () => { cancelled = true; };
-  }, [fetchSpec]);
+  }, [fetchSpec, isSnapshot]);
+
+  const partyRankings = snapshotParties ?? fetchedPartyRankings;
+  const hostRankings = snapshotHosts ?? fetchedHostRankings;
 
   // Push parties below rating threshold to the end
   const sortedPartyRankings = useMemo(() => {

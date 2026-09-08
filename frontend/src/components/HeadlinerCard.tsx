@@ -33,6 +33,7 @@ import { isLastSemesterChampion } from '@/lib/lastSemesterChampions';
 import { voteCounts } from '@/utils/ratingHelpers';
 import { displayDoorTime } from '@/utils/dateHelpers';
 import { openMapsDirections } from '../utils/shareHelpers';
+import { usePartyHref } from '@/contexts/DemoModeContext';
 
 function HeadlinerCard({
   id,
@@ -56,6 +57,7 @@ function HeadlinerCard({
   posterImage,
   onShowToast,
 }: FeedCardProps) {
+  const detailHref = usePartyHref(id);
   const handleNavigate = () => {
     if (onNavigateClick) {
       void onNavigateClick(id);
@@ -74,7 +76,7 @@ function HeadlinerCard({
     <article className="relative w-full mb-3 bg-temple-surface-2 border border-white/10 rounded-2xl overflow-hidden animate-slide-up-fade">
       {/* The whole-card tap target — everything except the action row
           falls through to this link. */}
-      <Link href={`/party/${id}`} className="absolute inset-0 z-[1]" aria-label={`View ${title}`}>
+      <Link href={detailHref} className="absolute inset-0 z-[1]" aria-label={`View ${title}`}>
         <span className="sr-only">View party</span>
       </Link>
 

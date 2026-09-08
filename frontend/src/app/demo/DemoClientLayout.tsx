@@ -1,11 +1,16 @@
 'use client';
 
-import { DemoWeekendProvider } from '@/hooks/useDemoWeekend';
+import { DemoModeProvider } from '@/contexts/DemoModeContext';
+import { DemoSessionProvider } from '@/contexts/DemoSessionContext';
 
 /**
- * Demo chrome: shared frozen weekend + noindex metadata (in sibling layout.tsx).
- * Pages under /demo/* are real routes (not view-swap).
+ * Demo chrome: isolated fixture + session, and DemoMode so shared cards
+ * never link into the live app.
  */
 export default function DemoClientLayout({ children }: { children: React.ReactNode }) {
-  return <DemoWeekendProvider>{children}</DemoWeekendProvider>;
+  return (
+    <DemoModeProvider>
+      <DemoSessionProvider>{children}</DemoSessionProvider>
+    </DemoModeProvider>
+  );
 }

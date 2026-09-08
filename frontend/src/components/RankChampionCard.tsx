@@ -18,6 +18,7 @@ import StagePoster from '@/components/ui/StagePoster';
 import Pill from '@/components/ui/Pill';
 import VoteArrow from '@/components/ui/VoteArrow';
 import { GoingStat } from './RankingRow';
+import { usePartyHref } from '@/contexts/DemoModeContext';
 
 interface RankChampionCardProps {
   party: PartyRanking;
@@ -26,8 +27,9 @@ interface RankChampionCardProps {
 }
 
 function RankChampionCard({ party, periodLabel }: RankChampionCardProps) {
+  const detailHref = usePartyHref(party.id);
   return (
-    <Link href={`/party/${party.id}`} className="block mb-3">
+    <Link href={detailHref} className="block mb-3">
       <article className="bg-temple-surface-2 border border-white/10 rounded-2xl overflow-hidden animate-slide-up-fade transition-colors hover:border-white/20">
         <StagePoster src={party.posterImage ?? undefined} title={party.title} heightClass="h-[280px]" priority />
 

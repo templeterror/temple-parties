@@ -35,6 +35,14 @@ export function partyPath(partyId: string): string {
   return `/party/${partyId}`;
 }
 
+export function demoPartyPath(partyId: string): string {
+  return `/demo/party/${partyId}`;
+}
+
+export function partyHref(partyId: string, demo: boolean): string {
+  return demo ? demoPartyPath(partyId) : partyPath(partyId);
+}
+
 /**
  * Routes that must stay reachable without an account: sign-in, the Azure
  * callback, unfinished onboarding, and the recruiter demo snapshot.
