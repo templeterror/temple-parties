@@ -84,8 +84,11 @@ drag up or tap the header pushes the party page.
 While it's open the map dims under the pins and the map is locked to the
 party zone (York → Girard, 5th → 19th — `PARTY_ZONE` in `utils/mapHelpers.ts`).
 Also in the kit:
-`AddressAutocomplete` (shared by create-party + become-host) and the
-rankings pieces `RankChampionCard` / `RankingRow` / `HostRankingRow`.
+`AddressAutocomplete` (shared by create-party + become-host), the
+rankings pieces `RankChampionCard` / `RankingRow` / `HostRankingRow`, and
+`HostTonightPrompt` (floating card above the tab bar; hosts/admins once
+per day Wed–Sat, everyone else once on Friday; swipe down or Escape to
+dismiss — no ✕; hosts go to `/create`, everyone else to `/become-host`).
 
 ## Card anatomy (the feed)
 
@@ -170,3 +173,5 @@ server-side, surfaced as toast, never preached in copy) → sticky bar.
 | 2026-08-27 | Cover tiles show data, not prose (owner: "$10 at the door" on a tile is wrong): `utils/coverPrice.ts` reads the amount out of the host's free text → tiles are only `FREE` / `$N` / `—` (party page keeps `ONLINE` for ticketed-with-no-price). Admin queue still shows the raw text |
 | 2026-08-27 | Map pins + sheet from Figma §13 (owner): ring pin for **verified hosts only** (`isVerified` stands in for the paid tier — no backend gate yet), free hosts keep the disc; default brand = app palette via CSS vars until the picker ships. Leaflet popup → `PartySheet` bottom drawer. Sheet stats are STARTS / ENDS / COVER (WALK dropped — no location permission). House footprint glow and pin clustering deferred (no parcel data; zoom lock makes clusters rare) |
 | 2026-08-27 | Map pin going-count is always a hanging pill badge (owner: phone couldn't read the in-circle number): same `pin-count-badge` on disc + ring, 11px above iOS text-size floor, Leaflet cell overflow visible |
+| 2026-09-10 | Saturday host prompt: a floating (not modal) card rises from under the tab bar on Home during the Saturday 6 AM–Sunday 5:59 AM window. Same 6 AM rollover as `getDefaultDay`. No glow. Copy is always “post a party” (not become-a-host). Body is “N students are looking now, put it on the feed!” with N a 150–350 draw (no replacement until the deck is spent; locked per Saturday so it does not flicker). Hosts/admins still land on `/create`, everyone else on `/become-host`. Dismiss is a PartySheet-style grabber + swipe down (Escape still works; no ✕). Dismissal persists until next Saturday. `?host_prompt=1` forces it for QA. Material is Apple-style frost (`backdrop-filter` on a dedicated layer — allowed because this is a fixed overlay, not a scrolling surface). |
+| 2026-09-10 | Host prompt cadence (owner): hosts/admins see it once per rolled day Wed–Sat; regulars once on Friday (Fri 6 AM–Sat 5:59 AM). Consume-on-reveal, keyed by user id so two accounts on one phone do not share the counter. Same sheet, swipe, looking-count, and CTA routing. |

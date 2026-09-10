@@ -12,6 +12,10 @@ import {
   displayDoorTime,
   parseDoorTimeParts,
   formatDoorTimeParts,
+  isSaturdayPartyWindow,
+  getSaturdayWindowISO,
+  getPromptCadenceDay,
+  getRolledDateISO,
 } from '../utils/dateHelpers';
 
 describe('dateHelpers', () => {
@@ -76,6 +80,65 @@ describe('dateHelpers', () => {
     it('should treat Sunday before 6 AM as Saturday', () => {
       mockDate(0, 3);
       expect(getDefaultDay()).toBe('saturday');
+    });
+  });
+
+  describe('getPromptCadenceDay / getRolledDateISO', () => {
+    const wed = new Date(2026, 8, 9, 15, 0, 0);
+    const thu = new Date(2026, 8, 10, 15, 0, 0);
+    const fri = new Date(2026, 8, 11, 15, 0, 0);
+    const sat = new Date(2026, 8, 12, 15, 0, 0);
+    const sun = new Date(2026, 8, 13, 15, 0, 0);
+    const mon = new Date(2026, 8, 14, 15, 0, 0);
+    const tue = new Date(2026, 8, 15, 15, 0, 0);
+
+    it('is Wed–Sat after 6 AM, and null Sun–Tue', () => {
+      expect(getPromptCadenceDay(wed)).toBe('wednesday');
+      expect(getPromptCadenceDay(thu)).toBe('thursday');
+      expect(getPromptCadenceDay(fri)).toBe('friday');
+      expect(getPromptCadenceDay(sat)).toBe('saturday');
+      expect(getPromptCadenceDay(sun)).toBeNull();
+      expect(getPromptCadenceDay(mon)).toBeNull();
+      expect(getPromptCadenceDay(tue)).toBeNull();
+    });
+
+    it('rolls before 6 AM onto the previous cadence day', () => {
+      expect(getPromptCadenceDay(new Date(2026, 8, 9, 3, 0, 0))).toBeNull();
+      expect(getPromptCadenceDay(new Date(2026, 8, 10, 3, 0, 0))).toBe('wednesday');
+      expect(getPromptCadenceDay(new Date(2026, 8, 12, 3, 0, 0))).toBe('friday');
+      expect(getPromptCadenceDay(new Date(2026, 8, 13, 3, 0, 0))).toBe('saturday');
+    });
+
+    it('keys the rolled calendar date, including Sunday 3 AM as Saturday', () => {
+      expect(getRolledDateISO(sat)).toBe('2026-09-12');
+      expect(getRolledDateISO(new Date(2026, 8, 13, 3, 0, 0))).toBe('2026-09-12');
+      expect(getRolledDateISO(new Date(2026, 8, 12, 3, 0, 0))).toBe('2026-09-11');
+    });
+  });
+
+  describe('isSaturdayPartyWindow / getSaturdayWindowISO', () => {
+    // Saturday 12 Sep 2026. Pass the Date in — don't mock the constructor.
+    const satAfternoon = new Date(2026, 8, 12, 15, 0, 0);
+    const satBefore6am = new Date(2026, 8, 12, 3, 0, 0);
+    const sunBefore6am = new Date(2026, 8, 13, 3, 0, 0);
+    const sunAfternoon = new Date(2026, 8, 13, 15, 0, 0);
+    const friday = new Date(2026, 8, 11, 21, 0, 0);
+
+    it('is true Saturday afternoon through Sunday before 6 AM', () => {
+      expect(isSaturdayPartyWindow(satAfternoon)).toBe(true);
+      expect(isSaturdayPartyWindow(sunBefore6am)).toBe(true);
+    });
+
+    it('is false Friday night, Saturday before 6 AM, and Sunday afternoon', () => {
+      expect(isSaturdayPartyWindow(friday)).toBe(false);
+      expect(isSaturdayPartyWindow(satBefore6am)).toBe(false);
+      expect(isSaturdayPartyWindow(sunAfternoon)).toBe(false);
+    });
+
+    it('keys dismissals to that Saturday, including Sunday 3 AM', () => {
+      expect(getSaturdayWindowISO(satAfternoon)).toBe('2026-09-12');
+      expect(getSaturdayWindowISO(sunBefore6am)).toBe('2026-09-12');
+      expect(getSaturdayWindowISO(friday)).toBeNull();
     });
   });
 

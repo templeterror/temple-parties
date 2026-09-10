@@ -75,6 +75,10 @@ const config: Config = {
           'from': { opacity: '0', transform: 'translateY(20px)' },
           'to': { opacity: '1', transform: 'translateY(0)' },
         },
+        'host-prompt-in': {
+          from: { opacity: '0', transform: 'translateY(110%)' },
+          to: { opacity: '1', transform: 'translateY(0)' },
+        },
         'number-pop': {
           '0%': { transform: 'scale(1)' },
           '50%': { transform: 'scale(1.3)' },
@@ -93,6 +97,7 @@ const config: Config = {
         'pulse-subtle': 'pulse-subtle 2s ease-in-out infinite',
         'pulse-glow': 'pulse-glow 2s ease-in-out infinite',
         'slide-up-fade': 'slide-up-fade 400ms ease-out',
+        'host-prompt-in': 'host-prompt-in 520ms cubic-bezier(0.22, 1, 0.36, 1)',
         'number-pop': 'number-pop 300ms ease-out',
         'going-click': 'going-click 300ms ease-out',
       },

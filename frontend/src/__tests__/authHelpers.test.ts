@@ -81,6 +81,10 @@ describe('loginPitch', () => {
   it('switches copy for create-party', () => {
     expect(loginPitch('/create', 'addParty').title).toMatch(/post a party/i);
   });
+
+  it('switches copy for become-host', () => {
+    expect(loginPitch('/become-host').title).toMatch(/host/i);
+  });
 });
 
 describe('isAuthPublicPath', () => {
