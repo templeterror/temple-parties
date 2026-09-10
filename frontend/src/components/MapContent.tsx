@@ -97,16 +97,16 @@ function TempleLabel() {
 }
 
 /**
- * Keeps the map inside the party zone (York → Girard, 5th → 19th).
+ * Soft city lock: keeps the map inside the Philadelphia PARTY_ZONE box.
  *
  * Panning is handled by `maxBounds` on the MapContainer. This component
  * handles ZOOM-OUT: the floor is "the zoom where the zone exactly fills
- * the screen", so no pixel outside the zone can ever be on screen at
- * rest. That number depends on the viewport — roughly 15.2 on a phone
- * (the zone is only ~2.2 km tall) and ~16.2 on a wide desktop window —
- * so it has to be computed against the live map, not hard-coded, and
- * recomputed whenever the viewport changes (rotation, iOS toolbar
- * collapse, desktop window drag). Leaflet fires `resize` for all of those.
+ * the screen", so no pixel outside the city can ever be on screen at
+ * rest. With the Philly-sized box that floors around ~11–12 depending
+ * on the viewport — it has to be computed against the live map, not
+ * hard-coded, and recomputed whenever the viewport changes (rotation,
+ * iOS toolbar collapse, desktop window drag). Leaflet fires `resize`
+ * for all of those.
  *
  * Leaflet's own `getBoundsZoom(bounds, true)` would do this, but it snaps
  * to whole zoom levels (`zoomSnap`) and clamps to the *current* minZoom —
@@ -457,11 +457,11 @@ export default function MapContent({ parties, topPartyIds, userGoingParties, onG
         />
       </div>
 
-      {/* maxBounds = the party zone (York → Girard, 5th → 19th): you can't
-          pan outside it. maxBoundsViscosity 0 is the rubber-band feel —
-          drag a little past the edge and it springs back on release
-          (1 would be a hard wall). Zoom-out is floored by PartyZoneLock
-          so the zone always fills the screen. */}
+      {/* maxBounds = Philadelphia soft lock (PARTY_ZONE): you can't pan
+          outside the city box. maxBoundsViscosity 0 is the rubber-band
+          feel — drag a little past the edge and it springs back on
+          release (1 would be a hard wall). Zoom-out is floored by
+          PartyZoneLock so the city always fills the screen. */}
       <MapContainer
         center={TEMPLE_CENTER}
         zoom={15}

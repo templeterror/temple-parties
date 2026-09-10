@@ -81,8 +81,9 @@ COVER / STARTS / SHARE row (the party page's stat row with the door time in
 the middle seat), address + read-only votes on one row, then GOING + navigate
 (the sticky-bar pair; the count lives on the GOING button). Drag down closes,
 drag up or tap the header pushes the party page.
-While it's open the map dims under the pins and the map is locked to the
-party zone (York → Girard, 5th → 19th — `PARTY_ZONE` in `utils/mapHelpers.ts`).
+While it's open the map dims under the pins and the map uses a soft
+Philadelphia city lock (`PARTY_ZONE` in `utils/mapHelpers.ts` — Temple,
+Fishtown, Drexel/UCity, Lincoln Financial, Center City).
 Also in the kit:
 `AddressAutocomplete` (shared by create-party + become-host), the
 rankings pieces `RankChampionCard` / `RankingRow` / `HostRankingRow`, and
@@ -171,6 +172,7 @@ server-side, surfaced as toast, never preached in copy) → sticky bar.
 | 2026-08-22 | Host-line marks redrawn (owner: old pair "sucks"): VerifiedMark is one inline SVG seal (12 scallops, secondary fill, black check, 15px) replacing two pixel-nudged `<img>`s; last-semester `#1` is a bare 16px gold crown glyph after the seal (a filled gold chip was tried and rejected by the owner as too button-like); cards/HostRow/map popup all use 4px gaps, marks carry no margin |
 | 2026-08-21 | Party-page SHARE is the loudest secondary (TUP-9): a SHARE tile in the COVER / GOING row (iOS tray icon). Native share falls back to execCommand copy so Mobile Safari / Instagram WebView actually get the URL. |
 | 2026-08-27 | Map locked to the party zone (owner): W York St → Girard Ave, 5th → 19th, as the smallest lat/lng box holding the four corner intersections; rubber-band edges; zoom-out floored at "zone fills the screen" per viewport (≈15.2 phone / ≈16 desktop); start view unchanged |
+| 2026-09-10 | Map + geocode soft city lock (owner): `PARTY_ZONE` / `VALID_BOUNDS` expanded to a Philadelphia box so Lincoln Financial, Fishtown, and Drexel are creatable and visible; rubber-band + "city fills the screen" zoom floor kept; Lincoln Financial Field added as a curated landmark |
 | 2026-08-27 | Cover tiles show data, not prose (owner: "$10 at the door" on a tile is wrong): `utils/coverPrice.ts` reads the amount out of the host's free text → tiles are only `FREE` / `$N` / `—` (party page keeps `ONLINE` for ticketed-with-no-price). Admin queue still shows the raw text |
 | 2026-08-27 | Map pins + sheet from Figma §13 (owner): ring pin for **verified hosts only** (`isVerified` stands in for the paid tier — no backend gate yet), free hosts keep the disc; default brand = app palette via CSS vars until the picker ships. Leaflet popup → `PartySheet` bottom drawer. Sheet stats are STARTS / ENDS / COVER (WALK dropped — no location permission). House footprint glow and pin clustering deferred (no parcel data; zoom lock makes clusters rare) |
 | 2026-08-27 | Map pin going-count is always a hanging pill badge (owner: phone couldn't read the in-circle number): same `pin-count-badge` on disc + ring, 11px above iOS text-size floor, Leaflet cell overflow visible |
