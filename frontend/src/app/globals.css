@@ -514,17 +514,17 @@ html {
 .host-tonight-prompt__glass {
   position: absolute;
   inset: 0;
-  border-radius: 20px;
+  border-radius: 24px 24px 0 0;
   background:
     linear-gradient(180deg, rgba(224, 212, 255, 0.22) 0%, transparent 36%),
     linear-gradient(180deg, rgba(224, 212, 255, 0.14) 0%, rgba(224, 212, 255, 0.04) 100%);
   backdrop-filter: blur(32px) saturate(180%);
   -webkit-backdrop-filter: blur(32px) saturate(180%);
   border: 1px solid rgba(224, 212, 255, 0.35);
+  border-bottom: none;
   box-shadow:
-    0 18px 50px rgba(0, 0, 0, 0.42),
-    inset 0 1px 0 rgba(224, 212, 255, 0.45),
-    inset 0 -1px 0 rgba(224, 212, 255, 0.08);
+    0 -12px 40px rgba(0, 0, 0, 0.55),
+    inset 0 1px 0 rgba(224, 212, 255, 0.45);
   pointer-events: none;
 }
 
@@ -533,8 +533,78 @@ html {
     background: #252528;
     backdrop-filter: none;
     -webkit-backdrop-filter: none;
+    border-radius: 24px 24px 0 0;
     border-color: rgba(224, 212, 255, 0.28);
     box-shadow: 0 -12px 40px rgba(0, 0, 0, 0.55);
+  }
+}
+
+/*
+ * Glass on primary — fill stays temple-purple (#b24bf3). Frost is the
+ * specular edge + saturate blur, not a washed translucent mix (that
+ * read grey on the sheet). No outer glow.
+ */
+.host-tonight-prompt__cta {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+  background-color: var(--purple-primary);
+  background-image: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.2) 0%,
+    rgba(255, 255, 255, 0) 42%
+  );
+  backdrop-filter: blur(16px) saturate(180%);
+  -webkit-backdrop-filter: blur(16px) saturate(180%);
+  border: 1px solid rgba(224, 212, 255, 0.5);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.38),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.12);
+  transition: transform 150ms ease, border-color 150ms ease, background-image 150ms ease;
+}
+
+.host-tonight-prompt__cta::before {
+  content: '';
+  position: absolute;
+  inset: 0 auto auto 0;
+  width: 100%;
+  height: 42%;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.16) 0%, transparent 100%);
+  pointer-events: none;
+}
+
+.host-tonight-prompt__cta:hover {
+  border-color: rgba(224, 212, 255, 0.72);
+  background-image: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.28) 0%,
+    rgba(255, 255, 255, 0) 42%
+  );
+}
+
+.host-tonight-prompt__cta:active {
+  transform: scale(0.98);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .host-tonight-prompt__cta,
+  .host-tonight-prompt__cta:active {
+    transition: none;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .host-tonight-prompt__cta {
+    background: var(--purple-primary);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    border-color: transparent;
+    box-shadow: none;
+  }
+
+  .host-tonight-prompt__cta::before {
+    display: none;
   }
 }
 

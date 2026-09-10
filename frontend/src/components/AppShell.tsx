@@ -1,7 +1,8 @@
 'use client';
 
 import BottomNav from '@/components/BottomNav';
-import HostTonightPrompt from '@/components/HostTonightPrompt';
+import { HostTonightPromptSheet } from '@/components/HostTonightPrompt';
+import useHostTonightPrompt from '@/hooks/useHostTonightPrompt';
 
 /**
  * Attendee chrome: bottom/desktop nav around routed pages.
@@ -11,7 +12,8 @@ import HostTonightPrompt from '@/components/HostTonightPrompt';
  * while a pin drawer is open: they trade the mobile tab bar for their own
  * bottom chrome. Desktop keeps the top bar either way — big screens always
  * have chrome to spare. HostTonightPrompt mounts here (Home only; hosts
- * daily Wed–Sat, regulars Friday).
+ * daily Wed–Sat, regulars Friday) and replaces the mobile tab bar while
+ * the sheet is up, same as PartySheet on the map.
  */
 export default function AppShell({
   children,
@@ -24,6 +26,8 @@ export default function AppShell({
   /** Suppress the mobile tab bar (party page, or map while a pin drawer is open). */
   hideBottomNav?: boolean;
 }) {
+  const prompt = useHostTonightPrompt();
+
   return (
     <main
       className={`min-h-screen bg-black lg:pt-16 ${
@@ -31,8 +35,8 @@ export default function AppShell({
       }`}
     >
       {children}
-      {!mapMode && <HostTonightPrompt />}
-      <BottomNav desktopOnly={hideBottomNav} />
+      {!mapMode && <HostTonightPromptSheet {...prompt} />}
+      <BottomNav desktopOnly={hideBottomNav || prompt.visible} />
     </main>
   );
 }

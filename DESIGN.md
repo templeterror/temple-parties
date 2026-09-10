@@ -86,9 +86,10 @@ party zone (York → Girard, 5th → 19th — `PARTY_ZONE` in `utils/mapHelpers.
 Also in the kit:
 `AddressAutocomplete` (shared by create-party + become-host), the
 rankings pieces `RankChampionCard` / `RankingRow` / `HostRankingRow`, and
-`HostTonightPrompt` (floating card above the tab bar; hosts/admins once
-per day Wed–Sat, everyone else once on Friday; swipe down or Escape to
-dismiss — no ✕; hosts go to `/create`, everyone else to `/become-host`).
+`HostTonightPrompt` (bottom drawer that replaces the mobile tab bar,
+same as `PartySheet` on the map; hosts/admins once per day Wed–Sat,
+everyone else once on Friday; swipe down or Escape to dismiss — no ✕;
+hosts go to `/create`, everyone else to `/become-host`).
 
 ## Card anatomy (the feed)
 
@@ -175,3 +176,5 @@ server-side, surfaced as toast, never preached in copy) → sticky bar.
 | 2026-08-27 | Map pin going-count is always a hanging pill badge (owner: phone couldn't read the in-circle number): same `pin-count-badge` on disc + ring, 11px above iOS text-size floor, Leaflet cell overflow visible |
 | 2026-09-10 | Saturday host prompt: a floating (not modal) card rises from under the tab bar on Home during the Saturday 6 AM–Sunday 5:59 AM window. Same 6 AM rollover as `getDefaultDay`. No glow. Copy is always “post a party” (not become-a-host). Body is “N students are looking now, put it on the feed!” with N a 150–350 draw (no replacement until the deck is spent; locked per Saturday so it does not flicker). Hosts/admins still land on `/create`, everyone else on `/become-host`. Dismiss is a PartySheet-style grabber + swipe down (Escape still works; no ✕). Dismissal persists until next Saturday. `?host_prompt=1` forces it for QA. Material is Apple-style frost (`backdrop-filter` on a dedicated layer — allowed because this is a fixed overlay, not a scrolling surface). |
 | 2026-09-10 | Host prompt cadence (owner): hosts/admins see it once per rolled day Wed–Sat; regulars once on Friday (Fri 6 AM–Sat 5:59 AM). Consume-on-reveal, keyed by user id so two accounts on one phone do not share the counter. Same sheet, swipe, looking-count, and CTA routing. |
+| 2026-09-10 | Host prompt sheet sits on the bottom of the screen and replaces the mobile tab bar while open (same pattern as map `PartySheet`). Desktop top bar stays. |
+| 2026-09-10 | Host prompt CTA is frost on primary (`#b24bf3` fill, specular edge, no glow) — no TONIGHT eyebrow. `prefers-reduced-transparency` stays solid `temple-purple`. |
