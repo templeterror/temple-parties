@@ -17,6 +17,7 @@ import {
   shouldShowHostTonightPrompt,
 } from '@/lib/hostTonightPrompt';
 import HostTonightPrompt from '@/components/HostTonightPrompt';
+import AppShell from '@/components/AppShell';
 
 const WED = new Date(2026, 8, 9, 15, 0, 0);
 const THU = new Date(2026, 8, 10, 15, 0, 0);
@@ -229,12 +230,14 @@ describe('HostTonightPrompt', () => {
     });
 
     expect(screen.getByText('Throwing a party?')).toBeTruthy();
+    expect(screen.queryByText('Tonight')).toBeNull();
     const body = screen.getByText(/\d+ students are looking now, put it on the feed!/);
     const count = Number(body.textContent?.match(/(\d+)/)?.[1]);
     expect(count).toBeGreaterThanOrEqual(LOOKING_COUNT_MIN);
     expect(count).toBeLessThanOrEqual(LOOKING_COUNT_MAX);
     const cta = screen.getByRole('link', { name: HOST_TONIGHT_CTA });
     expect(cta.getAttribute('href')).toBe('/become-host');
+    expect(cta.className).toContain('host-tonight-prompt__cta');
   });
 
   it('sends hosts to create-party with the same post copy', () => {
@@ -309,5 +312,21 @@ describe('HostTonightPrompt', () => {
       jest.advanceTimersByTime(1100);
     });
     expect(screen.queryByText('Throwing a party?')).toBeNull();
+  });
+
+  it('replaces the mobile tab bar while the sheet is up', () => {
+    render(
+      <AppShell>
+        <div>feed</div>
+      </AppShell>,
+    );
+    expect(document.querySelector('nav.lg\\:hidden')).toBeTruthy();
+
+    act(() => {
+      jest.advanceTimersByTime(1100);
+    });
+
+    expect(screen.getByText('Throwing a party?')).toBeTruthy();
+    expect(document.querySelector('nav.lg\\:hidden')).toBeNull();
   });
 });
