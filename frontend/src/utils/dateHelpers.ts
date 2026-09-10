@@ -1,22 +1,72 @@
 import { PartyDay, PARTY_DAYS } from '@/lib/types';
 
+/** Weekday after the 6 AM rollover (0 = Sunday … 6 = Saturday). */
+function rolledWeekday(now: Date): number {
+  let dayOfWeek = now.getDay();
+  if (now.getHours() < 6) {
+    dayOfWeek = (dayOfWeek - 1 + 7) % 7;
+  }
+  return dayOfWeek;
+}
+
+/**
+ * Calendar date (YYYY-MM-DD) after the 6 AM rollover.
+ * Sunday 2 AM still belongs to Saturday.
+ */
+export function getRolledDateISO(now: Date = new Date()): string {
+  const rolled = new Date(now.getTime());
+  if (now.getHours() < 6) {
+    rolled.setDate(rolled.getDate() - 1);
+  }
+  return toISODate(rolled);
+}
+
+/** Days the host prompt is allowed to run. Not the feed's Thu/Fri/Sat tabs. */
+export type PromptCadenceDay = 'wednesday' | 'thursday' | 'friday' | 'saturday';
+
+/**
+ * Host-prompt weekday with the same 6 AM rollover as getDefaultDay.
+ * Sun–Tue (after rollover) are null — do not reuse getDefaultDay, which
+ * maps those mornings onto the Thursday feed tab.
+ */
+export function getPromptCadenceDay(now: Date = new Date()): PromptCadenceDay | null {
+  const dayOfWeek = rolledWeekday(now);
+  if (dayOfWeek === 3) return 'wednesday';
+  if (dayOfWeek === 4) return 'thursday';
+  if (dayOfWeek === 5) return 'friday';
+  if (dayOfWeek === 6) return 'saturday';
+  return null;
+}
+
 /**
  * Get the default day to display based on current day of week.
  * On a party night (Thu/Fri/Sat, with 6 AM rollover) show that night;
  * otherwise show Thursday — the first night of the weekend.
  */
 export function getDefaultDay(now: Date = new Date()): PartyDay {
-  let dayOfWeek = now.getDay(); // 0 = Sunday, 6 = Saturday
-
-  // Before 6 AM, treat as previous day (parties run past midnight)
-  if (now.getHours() < 6) {
-    dayOfWeek = (dayOfWeek - 1 + 7) % 7;
-  }
+  const dayOfWeek = rolledWeekday(now);
 
   if (dayOfWeek === 4) return 'thursday';
   if (dayOfWeek === 5) return 'friday';
   if (dayOfWeek === 6) return 'saturday';
   return 'thursday';
+}
+
+/**
+ * Saturday night window, same 6 AM rollover as getDefaultDay: Saturday 6 AM
+ * through Sunday 5:59 AM. Used to time the "throw tonight" host prompt.
+ */
+export function isSaturdayPartyWindow(now: Date = new Date()): boolean {
+  return getDefaultDay(now) === 'saturday';
+}
+
+/**
+ * Calendar Saturday (YYYY-MM-DD) for the current Saturday party window.
+ * Sunday 2 AM still belongs to Saturday night. Null when it isn't Saturday.
+ */
+export function getSaturdayWindowISO(now: Date = new Date()): string | null {
+  if (!isSaturdayPartyWindow(now)) return null;
+  return getRolledDateISO(now);
 }
 
 const DAY_WEEKDAY: Record<PartyDay, number> = {
@@ -40,11 +90,7 @@ export function getAlsoTonightLabel(
   count: number,
   now: Date = new Date(),
 ): string {
-  let dayOfWeek = now.getDay();
-  if (now.getHours() < 6) {
-    dayOfWeek = (dayOfWeek - 1 + 7) % 7;
-  }
-  const isTonight = DAY_WEEKDAY[selectedDay] === dayOfWeek;
+  const isTonight = DAY_WEEKDAY[selectedDay] === rolledWeekday(now);
   const word = isTonight ? 'TONIGHT' : DAY_WORD[selectedDay];
   return `ALSO ${word} · ${count}`;
 }

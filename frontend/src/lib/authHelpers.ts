@@ -86,6 +86,12 @@ export function loginPitch(
       body: 'school email only · about 10 seconds.',
     };
   }
+  if (nextPath.startsWith('/become-host')) {
+    return {
+      title: 'Sign in to host',
+      body: 'school email only · about 10 seconds.',
+    };
+  }
   if (pendingType === 'going' || nextPath.startsWith('/party/')) {
     return {
       title: "This one's on the lineup",

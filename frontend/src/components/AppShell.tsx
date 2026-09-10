@@ -1,6 +1,7 @@
 'use client';
 
 import BottomNav from '@/components/BottomNav';
+import HostTonightPrompt from '@/components/HostTonightPrompt';
 
 /**
  * Attendee chrome: bottom/desktop nav around routed pages.
@@ -9,7 +10,8 @@ import BottomNav from '@/components/BottomNav';
  * hideBottomNav is for "pushed" routes like the party page, and for the map
  * while a pin drawer is open: they trade the mobile tab bar for their own
  * bottom chrome. Desktop keeps the top bar either way — big screens always
- * have chrome to spare.
+ * have chrome to spare. HostTonightPrompt mounts here (Home only; hosts
+ * daily Wed–Sat, regulars Friday).
  */
 export default function AppShell({
   children,
@@ -29,6 +31,7 @@ export default function AppShell({
       }`}
     >
       {children}
+      {!mapMode && <HostTonightPrompt />}
       <BottomNav desktopOnly={hideBottomNav} />
     </main>
   );
