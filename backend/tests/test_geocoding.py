@@ -1,5 +1,6 @@
 """Unit tests for geocoding helpers (no live Nominatim)."""
 from app.services.geocoding import (
+    _in_valid_bounds,
     format_us_address,
     geocode_address,
     match_temple_landmarks,
@@ -73,6 +74,25 @@ class TestTempleLandmarks:
         assert 39.97 < lat < 39.99
         assert -75.16 < lng < -75.14
 
+    def test_lincoln_financial_alias(self):
+        hits = match_temple_landmarks("the linc")
+        assert hits
+        assert hits[0]["display_name"] == "Lincoln Financial Field, Philadelphia, PA"
+        assert "Temple University" not in hits[0]["display_name"]
+
+    def test_lincoln_financial_query(self):
+        hits = match_temple_landmarks("lincoln financial")
+        assert hits
+        assert "Lincoln Financial Field" in hits[0]["display_name"]
+        assert "Temple University" not in hits[0]["display_name"]
+
+    def test_geocode_lincoln_financial_without_nominatim(self):
+        coords = geocode_address("Lincoln Financial Field")
+        assert coords is not None
+        lat, lng = coords
+        assert abs(lat - 39.900833) < 0.0001
+        assert abs(lng - (-75.1675)) < 0.0001
+
     def test_suggest_prepends_landmarks(self, monkeypatch):
         import httpx
 
@@ -93,3 +113,16 @@ class TestTempleLandmarks:
         hits = suggest_addresses("bell tower")
         assert hits
         assert "Bell Tower" in hits[0]["display_name"]
+
+
+class TestValidBounds:
+    def test_accepts_philly_party_spots(self):
+        assert _in_valid_bounds(39.900833, -75.1675)  # Lincoln Financial
+        assert _in_valid_bounds(39.9566, -75.1899)  # Drexel / UCity
+        assert _in_valid_bounds(39.9705, -75.134)  # Fishtown-ish
+        assert _in_valid_bounds(39.9812, -75.155)  # Temple
+
+    def test_rejects_far_away_coords(self):
+        assert not _in_valid_bounds(40.7128, -74.006)  # NYC
+        assert not _in_valid_bounds(39.85, -75.1675)  # south of box
+        assert not _in_valid_bounds(40.2, -75.155)  # north of box
