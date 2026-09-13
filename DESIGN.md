@@ -80,7 +80,12 @@ category + LIVE NOW tags, title, host line with "N parties hosted", STARTS /
 COVER / STARTS / SHARE row (the party page's stat row with the door time in
 the middle seat), address + read-only votes on one row, then GOING + navigate
 (the sticky-bar pair; the count lives on the GOING button). Drag down closes,
-drag up or tap the header pushes the party page.
+drag up or tap the header pushes the party page. The sheet wears the host
+prompt's Apple-style frost — the `.party-sheet*` rules are comma-joined onto
+`.host-tonight-prompt*` in `globals.css`, so glass layer, light-purple
+grabber, frost-on-primary GOING, and translucent stat tiles are literally
+the same declarations; `prefers-reduced-transparency` falls back to solid
+`#252528`.
 While it's open the map dims under the pins and the map uses a soft
 Philadelphia city lock (`PARTY_ZONE` in `utils/mapHelpers.ts` — Temple,
 Fishtown, Drexel/UCity, Lincoln Financial, Center City).
@@ -135,8 +140,9 @@ server-side, surfaced as toast, never preached in copy) → sticky bar.
    reserved for the compact GOING pill and avatars.
 5. **Map pins and the sheet mirror cards.** Pin CSS in `globals.css`
    consumes the same `--temple-*` vars (the headliner ★ is the HEADLINER
-   badge, pin-sized); the party sheet is plain kit components. Only the
-   sponsor pin still uses a Leaflet popup.
+   badge, pin-sized); the party sheet is plain kit components on the host
+   prompt's shared frost material (a fixed overlay, so rule 3 does not
+   apply). Only the sponsor pin still uses a Leaflet popup.
 6. **Forms mirror server validation, in friendlier words.** The server 422 is
    the backstop, never the UX: rules a host can hit get checked client-side
    with a human sentence under the field (ticket link https rule in
@@ -180,3 +186,4 @@ server-side, surfaced as toast, never preached in copy) → sticky bar.
 | 2026-09-10 | Host prompt cadence (owner): hosts/admins see it once per rolled day Wed–Sat; regulars once on Friday (Fri 6 AM–Sat 5:59 AM). Consume-on-reveal, keyed by user id so two accounts on one phone do not share the counter. Same sheet, swipe, looking-count, and CTA routing. |
 | 2026-09-10 | Host prompt sheet sits on the bottom of the screen and replaces the mobile tab bar while open (same pattern as map `PartySheet`). Desktop top bar stays. |
 | 2026-09-10 | Host prompt CTA is frost on primary (`#b24bf3` fill, specular edge, no glow) — no TONIGHT eyebrow. `prefers-reduced-transparency` stays solid `temple-purple`. |
+| 2026-09-13 | Map `PartySheet` takes the host prompt's frost material (owner, TUP-22): same glass layer, light-purple grabber, and frost-on-primary GOING, plus translucent light-purple stat tiles. The `.party-sheet*` selectors comma-join onto the existing `.host-tonight-prompt*` rules — one set of declarations, no copies. Information structure, copy, buttons, callbacks, drag thresholds, and accessibility are unchanged; `prefers-reduced-transparency` falls back to solid `#252528`. |

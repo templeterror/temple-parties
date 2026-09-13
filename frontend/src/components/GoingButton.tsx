@@ -30,6 +30,8 @@ interface GoingButtonProps {
   onGoingClick: () => void;
   variant?: GoingButtonVariant;
   tone?: 'primary' | 'secondary';
+  /** Lets a host surface (the map sheet) layer a material class on top. */
+  className?: string;
 }
 
 function GoingButton({
@@ -38,6 +40,7 @@ function GoingButton({
   onGoingClick,
   variant = 'bar',
   tone = 'primary',
+  className = '',
 }: GoingButtonProps) {
   // Quick squash-and-pop animation on tap — purely cosmetic feedback while
   // the optimistic count update happens upstream.
@@ -76,7 +79,7 @@ function GoingButton({
       title={userIsGoing ? 'Click to un-go' : 'Click to go'}
       className={`${shapeClass} ${toneClass} font-bold uppercase transition-all duration-150 flex items-center justify-center gap-1.5 font-montserrat hover:opacity-90 active:scale-[0.98] ${
         isAnimating ? 'animate-going-click' : ''
-      }`}
+      } ${className}`}
     >
       {userIsGoing && variant !== 'pill' && (
         <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
