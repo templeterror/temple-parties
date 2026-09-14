@@ -111,6 +111,18 @@ function OnboardingFlow() {
     if (user.avatarUrl) setPreviewUrl(user.avatarUrl);
   }, [flowActive, isAuthenticated, isLoading, needsOnboarding, router, user]);
 
+  // Kill any in-flight debounce when the page goes away (TUP-7), otherwise the
+  // timer fires post-unmount and setUsernameStatus warns about setting state on
+  // a component that no longer exists.
+  useEffect(() => {
+    return () => {
+      if (checkTimer.current) {
+        clearTimeout(checkTimer.current);
+        checkTimer.current = null;
+      }
+    };
+  }, []);
+
   const runUsernameCheck = useCallback((value: string) => {
     if (checkTimer.current) clearTimeout(checkTimer.current);
     const cleaned = value.trim();
@@ -174,6 +186,16 @@ function OnboardingFlow() {
     e.preventDefault();
     const cleaned = username.trim();
     if (!USERNAME_PATTERN.test(cleaned) || usernameStatus === 'taken') return;
+    // Drop any debounced availability check still waiting to fire (TUP-7).
+    // Continue no longer waits on that request, so a late response could
+    // otherwise land after the save and flip the hint to "taken" on a
+    // username we just successfully claimed. The server is the real
+    // authority here — a genuine conflict comes back as a /taken/i error
+    // below and sets the status then.
+    if (checkTimer.current) {
+      clearTimeout(checkTimer.current);
+      checkTimer.current = null;
+    }
     setSubmitting(true);
     setError('');
     const result = await updateProfile({ username: cleaned });
@@ -344,7 +366,7 @@ function OnboardingFlow() {
                   key={y.value}
                   type="button"
                   onClick={() => setSchoolYear(y.value)}
-                  className={`w-full text-left px-4 py-3 rounded-xl font-montserrat border transition-colors ${
+                  className={`w-full text-left px-4 py-3 rounded-xl font-montserrat border transition-colors touch-manipulation ${
                     schoolYear === y.value
                       ? 'border-[#b24bf3] bg-[#b24bf3]/15 text-white'
                       : 'border-zinc-700 bg-zinc-900 text-white/80 hover:border-zinc-500'
@@ -358,7 +380,7 @@ function OnboardingFlow() {
             <button
               type="submit"
               disabled={!ready || !schoolYear || submitting}
-              className="w-full py-3.5 rounded-xl font-montserrat font-semibold text-white bg-[#b24bf3] disabled:opacity-50"
+              className="w-full py-3.5 rounded-xl font-montserrat font-semibold text-white bg-[#b24bf3] disabled:opacity-50 touch-manipulation"
             >
               {submitting ? 'Saving…' : 'Continue'}
             </button>
@@ -384,7 +406,7 @@ function OnboardingFlow() {
                   runUsernameCheck(v);
                 }}
                 placeholder="owl_party"
-                className="w-full px-4 py-3.5 bg-zinc-900 border border-zinc-700 rounded-xl text-white placeholder-white/40 font-montserrat focus:border-[#b24bf3] outline-none"
+                className="w-full px-4 py-3.5 bg-zinc-900 border border-zinc-700 rounded-xl text-white placeholder-white/40 font-montserrat focus:border-[#b24bf3] outline-none touch-manipulation"
               />
               <p
                 className={`text-sm mt-2 font-montserrat ${
@@ -401,13 +423,17 @@ function OnboardingFlow() {
             {error && <p className="text-red-400 text-sm">{error}</p>}
             <button
               type="submit"
+              /* Not gated on 'checking' (TUP-7): a valid-looking username is
+                 submittable the instant it matches the pattern. Waiting on the
+                 debounced lookup made Continue dead for ~350ms+ after the last
+                 keystroke, which read as a broken button and drove rageclicks.
+                 A name taken between check and save still fails server-side. */
               disabled={
                 submitting ||
                 !USERNAME_PATTERN.test(username.trim()) ||
-                usernameStatus === 'taken' ||
-                usernameStatus === 'checking'
+                usernameStatus === 'taken'
               }
-              className="w-full py-3.5 rounded-xl font-montserrat font-semibold text-white bg-[#b24bf3] disabled:opacity-50"
+              className="w-full py-3.5 rounded-xl font-montserrat font-semibold text-white bg-[#b24bf3] disabled:opacity-50 touch-manipulation"
             >
               {submitting ? 'Saving…' : 'Continue'}
             </button>
@@ -424,7 +450,7 @@ function OnboardingFlow() {
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
-                className="w-28 h-28 rounded-full bg-zinc-900 border border-zinc-700 overflow-hidden flex items-center justify-center text-white/50 font-montserrat text-sm hover:border-[#b24bf3]"
+                className="w-28 h-28 rounded-full bg-zinc-900 border border-zinc-700 overflow-hidden flex items-center justify-center text-white/50 font-montserrat text-sm hover:border-[#b24bf3] touch-manipulation"
               >
                 {previewUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element
@@ -445,7 +471,7 @@ function OnboardingFlow() {
             <button
               type="submit"
               disabled={submitting}
-              className="w-full py-3.5 rounded-xl font-montserrat font-semibold text-white bg-[#b24bf3] disabled:opacity-50"
+              className="w-full py-3.5 rounded-xl font-montserrat font-semibold text-white bg-[#b24bf3] disabled:opacity-50 touch-manipulation"
             >
               {submitting ? 'Uploading…' : 'Continue'}
             </button>
@@ -453,7 +479,7 @@ function OnboardingFlow() {
               type="button"
               disabled={submitting}
               onClick={() => goNext()}
-              className="w-full py-2 text-sm font-montserrat text-white/50 hover:text-white"
+              className="w-full py-2 text-sm font-montserrat text-white/50 hover:text-white touch-manipulation"
             >
               Skip for now
             </button>
@@ -471,13 +497,13 @@ function OnboardingFlow() {
               value={greekLife}
               onChange={(e) => setGreekLife(e.target.value.slice(0, 100))}
               placeholder="e.g. AEPi"
-              className="w-full px-4 py-3.5 bg-zinc-900 border border-zinc-700 rounded-xl text-white placeholder-white/40 font-montserrat focus:border-[#b24bf3] outline-none"
+              className="w-full px-4 py-3.5 bg-zinc-900 border border-zinc-700 rounded-xl text-white placeholder-white/40 font-montserrat focus:border-[#b24bf3] outline-none touch-manipulation"
             />
             {error && <p className="text-red-400 text-sm">{error}</p>}
             <button
               type="submit"
               disabled={submitting}
-              className="w-full py-3.5 rounded-xl font-montserrat font-semibold text-white bg-[#b24bf3] disabled:opacity-50"
+              className="w-full py-3.5 rounded-xl font-montserrat font-semibold text-white bg-[#b24bf3] disabled:opacity-50 touch-manipulation"
             >
               {submitting ? 'Saving…' : 'Continue'}
             </button>
@@ -485,7 +511,7 @@ function OnboardingFlow() {
               type="button"
               disabled={submitting}
               onClick={() => goNext()}
-              className="w-full py-2 text-sm font-montserrat text-white/50 hover:text-white"
+              className="w-full py-2 text-sm font-montserrat text-white/50 hover:text-white touch-manipulation"
             >
               Skip for now
             </button>
@@ -507,14 +533,14 @@ function OnboardingFlow() {
                   setInstagram(e.target.value.replace(/[^a-zA-Z0-9._]/g, '').slice(0, 30))
                 }
                 placeholder="temple_owl"
-                className="w-full pl-8 pr-4 py-3.5 bg-zinc-900 border border-zinc-700 rounded-xl text-white placeholder-white/40 font-montserrat focus:border-[#b24bf3] outline-none"
+                className="w-full pl-8 pr-4 py-3.5 bg-zinc-900 border border-zinc-700 rounded-xl text-white placeholder-white/40 font-montserrat focus:border-[#b24bf3] outline-none touch-manipulation"
               />
             </div>
             {error && <p className="text-red-400 text-sm">{error}</p>}
             <button
               type="submit"
               disabled={submitting}
-              className="w-full py-3.5 rounded-xl font-montserrat font-semibold text-white bg-[#b24bf3] disabled:opacity-50"
+              className="w-full py-3.5 rounded-xl font-montserrat font-semibold text-white bg-[#b24bf3] disabled:opacity-50 touch-manipulation"
             >
               {submitting ? 'Finishing…' : 'Finish'}
             </button>
@@ -522,7 +548,7 @@ function OnboardingFlow() {
               type="button"
               disabled={submitting}
               onClick={() => void finishOnboarding()}
-              className="w-full py-2 text-sm font-montserrat text-white/50 hover:text-white"
+              className="w-full py-2 text-sm font-montserrat text-white/50 hover:text-white touch-manipulation"
             >
               Skip for now
             </button>
@@ -535,7 +561,15 @@ function OnboardingFlow() {
 /** FLOW 2 onboarding. Required: school year + username. Optional steps offer Skip. */
 export default function OnboardingPage() {
   return (
-    <main className="min-h-screen bg-black flex items-center justify-center px-6 py-12">
+    /* Top-anchored on mobile, centered only at sm+ (TUP-7).
+       Vertical centering re-solves the layout every time the on-screen
+       keyboard opens or closes — the username input autofocuses, and the
+       Greek/Instagram inputs are tapped — so the whole form (Continue
+       included) slid under the user's thumb mid-tap. Anchoring to the top
+       pins the buttons in place; `min-h-dvh` tracks the *dynamic* viewport
+       so mobile browser chrome collapsing doesn't resize the box either.
+       Desktop has no soft keyboard, so it still centers at sm and up. */
+    <main className="min-h-dvh bg-black flex items-start sm:items-center justify-center px-6 pt-12 pb-16 sm:py-12">
       <OnboardingFlow />
     </main>
   );
