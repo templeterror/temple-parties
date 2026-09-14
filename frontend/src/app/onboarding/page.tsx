@@ -1,10 +1,11 @@
 'use client';
 
-import { FormEvent, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { authApi } from '@/services/api';
+import Wordmark from '@/components/ui/Wordmark';
 import { sanitizeNextPath } from '@/lib/authHelpers';
 import {
   ONBOARDING_STEPS,
@@ -34,13 +35,24 @@ function toProfileUser(user: AuthUser): User {
 }
 
 /**
+ * Read the `?next=` redirect target straight off the URL instead of through
+ * `useSearchParams()`. That hook forces the whole page into a Suspense
+ * bailout, so Next can't prerender any of it — the browser got an empty
+ * shell and had to wait for JS before painting anything (TUP-15). Reading
+ * `window.location` is client-only, so we guard for the server render and
+ * fall back to '/', which is what an absent `next` sanitizes to anyway.
+ */
+function readNextPath(): string {
+  if (typeof window === 'undefined') return '/';
+  return sanitizeNextPath(new URLSearchParams(window.location.search).get('next'));
+}
+
+/**
  * FLOW 2 onboarding: school year → username → avatar → greek → instagram → home.
  * Required: school year + username. Optional steps offer Skip (completable later on /profile).
  */
 function OnboardingFlow() {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const nextPath = sanitizeNextPath(searchParams.get('next'));
   const {
     user,
     isAuthenticated,
@@ -51,6 +63,8 @@ function OnboardingFlow() {
     refreshUser,
     logout,
   } = useAuth();
+
+  const stepIndexOf = (s: OnboardingStep) => ONBOARDING_STEPS.indexOf(s);
 
   const [flowActive, setFlowActive] = useState(false);
   const [step, setStep] = useState<OnboardingStep>('school-year');
@@ -68,11 +82,10 @@ function OnboardingFlow() {
   const checkTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const stepIndex = ONBOARDING_STEPS.indexOf(step);
-  const safeNext = nextPath;
-
   useEffect(() => {
     if (isLoading) return;
+
+    const safeNext = readNextPath();
 
     if (!isAuthenticated) {
       router.replace(
@@ -96,7 +109,7 @@ function OnboardingFlow() {
     if (user.greekLife) setGreekLife(user.greekLife);
     if (user.instagram) setInstagram(user.instagram);
     if (user.avatarUrl) setPreviewUrl(user.avatarUrl);
-  }, [flowActive, isAuthenticated, isLoading, needsOnboarding, router, safeNext, user]);
+  }, [flowActive, isAuthenticated, isLoading, needsOnboarding, router, user]);
 
   const runUsernameCheck = useCallback((value: string) => {
     if (checkTimer.current) clearTimeout(checkTimer.current);
@@ -129,22 +142,23 @@ function OnboardingFlow() {
     });
     await refreshUser();
     setFlowActive(false);
-    router.replace(safeNext);
-  }, [greekLife, instagram, pendingBlob, refreshUser, router, safeNext, user?.avatarUrl, user?.id]);
+    router.replace(readNextPath());
+  }, [greekLife, instagram, pendingBlob, refreshUser, router, user?.avatarUrl, user?.id]);
 
   const goNext = useCallback(() => {
-    const next = ONBOARDING_STEPS[stepIndex + 1];
+    const next = ONBOARDING_STEPS[ONBOARDING_STEPS.indexOf(step) + 1];
     if (next) {
       setStep(next);
       setError('');
       return;
     }
     void finishOnboarding();
-  }, [finishOnboarding, stepIndex]);
+  }, [finishOnboarding, step]);
 
   const saveSchoolYear = async (e: FormEvent) => {
     e.preventDefault();
-    if (!schoolYear) return;
+    // Pre-auth the form is painted but inert — no profile to write to yet.
+    if (!flowActive || !schoolYear) return;
     setSubmitting(true);
     setError('');
     const result = await updateProfile({ school_year: schoolYear });
@@ -250,21 +264,37 @@ function OnboardingFlow() {
     }
   }, [usernameStatus]);
 
-  if (isLoading || !isAuthenticated || (!flowActive && needsOnboarding === false)) {
-    return (
-      <div className="flex justify-center py-16">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#b24bf3]" />
-      </div>
-    );
-  }
-
-  if (!flowActive) {
-    return (
-      <div className="flex justify-center py-16">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#b24bf3]" />
-      </div>
-    );
-  }
+  /**
+   * Why this renders the first step instead of a spinner (TUP-15).
+   *
+   * The old LCP chain was strictly serial: static HTML → download JS →
+   * hydrate → supabase getSession() → GET /profiles/me → only THEN swap the
+   * spinner for the heading. Every one of those hops pushed the largest paint
+   * later, which is how /onboarding ended up at 3.4s.
+   *
+   * `isLoading` is true during the server render, so painting the real frame
+   * in that state puts the wordmark, progress bar, "Class of" heading and the
+   * year buttons into the static HTML — LCP now fires on HTML+CSS arrival,
+   * before any network round trip. For a brand-new user (the common case) the
+   * DOM is identical before and after auth resolves, so nothing shifts: no CLS.
+   *
+   * `flowActive` still gates the *writes*. Until the profile lands we don't
+   * know which step the user belongs on, so we show step one read-only-ish:
+   * the year buttons are tappable (local state only) but Continue stays
+   * disabled and `saveSchoolYear` early-returns.
+   *
+   * Trade-off we accept: an unauthenticated or already-onboarded visitor
+   * briefly sees the disabled first step before the effect above redirects
+   * them. First paint for the many beats a spinner for the few.
+   *
+   * Edge case we accept: GRAD_YEARS is computed from `new Date()`, so the
+   * prerendered HTML freezes the year list at build time. A build that
+   * straddles New Year renders a stale first year until the next deploy —
+   * a recoverable hydration mismatch, caught by the AuthGate Suspense
+   * boundary, which React repairs by re-rendering on the client.
+   */
+  const visibleStep: OnboardingStep = flowActive ? step : 'school-year';
+  const ready = flowActive;
 
   return (
     <div className="w-full max-w-md">
@@ -274,10 +304,11 @@ function OnboardingFlow() {
             which also redirected here. If saves fail, this link is the
             way out instead of "try logging in again" five times. */}
         <div className="flex items-start justify-between mb-6">
-          <Link href="/" className="inline-block text-[28px] leading-[22px] font-bitcount text-white">
-            Temple
-            <br />
-            Parties
+          {/* Shared Wordmark, not the old Bitcount "Temple / Parties" lockup:
+              DESIGN.md retired Bitcount from header/nav, and it was pulling a
+              419 KB variable TTF onto the onboarding critical path (TUP-15). */}
+          <Link href="/">
+            <Wordmark className="text-[28px]" />
           </Link>
           <button
             type="button"
@@ -294,14 +325,14 @@ function OnboardingFlow() {
             <div
               key={s}
               className={`h-1 flex-1 rounded-full ${
-                i <= stepIndex ? 'bg-[#b24bf3]' : 'bg-zinc-800'
+                i <= stepIndexOf(visibleStep) ? 'bg-[#b24bf3]' : 'bg-zinc-800'
               }`}
             />
           ))}
         </div>
       </div>
 
-        {step === 'school-year' && (
+        {visibleStep === 'school-year' && (
           <form onSubmit={saveSchoolYear} className="space-y-5">
             <div>
               <h1 className="text-white text-2xl font-montserrat font-semibold">Class of</h1>
@@ -326,7 +357,7 @@ function OnboardingFlow() {
             {error && <p className="text-red-400 text-sm">{error}</p>}
             <button
               type="submit"
-              disabled={!schoolYear || submitting}
+              disabled={!ready || !schoolYear || submitting}
               className="w-full py-3.5 rounded-xl font-montserrat font-semibold text-white bg-[#b24bf3] disabled:opacity-50"
             >
               {submitting ? 'Saving…' : 'Continue'}
@@ -334,7 +365,7 @@ function OnboardingFlow() {
           </form>
         )}
 
-        {step === 'username' && (
+        {visibleStep === 'username' && (
           <form onSubmit={saveUsername} className="space-y-5">
             <div>
               <h1 className="text-white text-2xl font-montserrat font-semibold">Choose a username</h1>
@@ -383,7 +414,7 @@ function OnboardingFlow() {
           </form>
         )}
 
-        {step === 'avatar' && (
+        {visibleStep === 'avatar' && (
           <form onSubmit={saveAvatar} className="space-y-5">
             <div>
               <h1 className="text-white text-2xl font-montserrat font-semibold">Profile picture</h1>
@@ -429,7 +460,7 @@ function OnboardingFlow() {
           </form>
         )}
 
-        {step === 'greek-life' && (
+        {visibleStep === 'greek-life' && (
           <form onSubmit={saveGreek} className="space-y-5">
             <div>
               <h1 className="text-white text-2xl font-montserrat font-semibold">Greek life</h1>
@@ -461,7 +492,7 @@ function OnboardingFlow() {
           </form>
         )}
 
-        {step === 'instagram' && (
+        {visibleStep === 'instagram' && (
           <form onSubmit={saveInstagram} className="space-y-5">
             <div>
               <h1 className="text-white text-2xl font-montserrat font-semibold">Instagram</h1>
@@ -505,13 +536,7 @@ function OnboardingFlow() {
 export default function OnboardingPage() {
   return (
     <main className="min-h-screen bg-black flex items-center justify-center px-6 py-12">
-      <Suspense
-        fallback={
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#b24bf3]" />
-        }
-      >
-        <OnboardingFlow />
-      </Suspense>
+      <OnboardingFlow />
     </main>
   );
 }
