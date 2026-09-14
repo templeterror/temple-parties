@@ -25,6 +25,11 @@ jest.mock('@/services/api', () => ({
   },
 }));
 
+// Typed handle on the mock so the TUP-7 tests can make the availability
+// check hang without settling.
+const checkUsernameAvailable = jest.requireMock('@/services/api').authApi
+  .checkUsernameAvailable as jest.Mock;
+
 // jest.setup.js mocks next/navigation with a fresh replace() per render, which
 // can't be asserted on. Override it with one shared spy.
 const replace = jest.fn();
@@ -66,6 +71,7 @@ describe('Onboarding page (TUP-15)', () => {
   beforeEach(() => {
     mockUseAuth.mockReset();
     replace.mockReset();
+    checkUsernameAvailable.mockReset().mockResolvedValue({ available: true });
     window.history.replaceState({}, '', '/onboarding');
   });
 
@@ -159,5 +165,84 @@ describe('Onboarding page (TUP-15)', () => {
     render(<OnboardingPage />);
 
     await waitFor(() => expect(replace).toHaveBeenCalledWith('/party/abc'));
+  });
+});
+
+/**
+ * TUP-7: Continue no longer waits on the debounced availability lookup.
+ * Gating it on `checking` left the button dead for ~350ms+ after the last
+ * keystroke, which read as broken and produced rageclicks on /onboarding.
+ */
+describe('Onboarding username step (TUP-7)', () => {
+  /** Land straight on the username step: year saved, username still missing. */
+  function renderUsernameStep(overrides: Record<string, unknown> = {}) {
+    const updateProfile =
+      (overrides.updateProfile as jest.Mock) ?? jest.fn().mockResolvedValue({ success: true });
+    mockUseAuth.mockReturnValue(
+      authState({
+        isAuthenticated: true,
+        needsOnboarding: true,
+        ...overrides,
+        updateProfile,
+        user: { ...completeUser, username: null, schoolYear: '2028' },
+      })
+    );
+    render(<OnboardingPage />);
+    return { updateProfile };
+  }
+
+  beforeEach(() => {
+    mockUseAuth.mockReset();
+    replace.mockReset();
+    checkUsernameAvailable.mockReset().mockResolvedValue({ available: true });
+    window.history.replaceState({}, '', '/onboarding');
+  });
+
+  it('submits a valid username while the availability check is still pending', async () => {
+    // Never settles — stands in for a slow network on the debounced lookup.
+    checkUsernameAvailable.mockReturnValue(new Promise(() => {}));
+
+    const { updateProfile } = renderUsernameStep();
+
+    await screen.findByRole('heading', { name: 'Choose a username' });
+    fireEvent.change(screen.getByRole('textbox'), { target: { value: 'owl_party' } });
+
+    const button = screen.getByRole('button', { name: 'Continue' }) as HTMLButtonElement;
+    expect(button.disabled).toBe(false);
+
+    fireEvent.click(button);
+
+    await waitFor(() => expect(updateProfile).toHaveBeenCalledWith({ username: 'owl_party' }));
+  });
+
+  it('keeps Continue disabled for a username that fails the pattern', async () => {
+    renderUsernameStep();
+
+    await screen.findByRole('heading', { name: 'Choose a username' });
+    fireEvent.change(screen.getByRole('textbox'), { target: { value: 'a' } });
+
+    expect((screen.getByRole('button', { name: 'Continue' }) as HTMLButtonElement).disabled).toBe(
+      true
+    );
+  });
+
+  it('marks the name taken and disables Continue when the server rejects it', async () => {
+    const updateProfile = jest
+      .fn()
+      .mockResolvedValue({ success: false, error: 'Username already taken' });
+    renderUsernameStep({ updateProfile });
+
+    await screen.findByRole('heading', { name: 'Choose a username' });
+    fireEvent.change(screen.getByRole('textbox'), { target: { value: 'owl_party' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
+
+    // The optimistic submit is the whole point of TUP-7 — the server stays
+    // the authority on collisions, and its verdict has to reach the UI.
+    expect(await screen.findByText('Already taken')).toBeInTheDocument();
+    await waitFor(() =>
+      expect((screen.getByRole('button', { name: 'Continue' }) as HTMLButtonElement).disabled).toBe(
+        true
+      )
+    );
   });
 });
