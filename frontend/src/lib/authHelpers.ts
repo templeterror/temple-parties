@@ -31,6 +31,37 @@ export function onboardingPath(nextPath: string): string {
   return `/onboarding?next=${encodeURIComponent(next)}`;
 }
 
+/**
+ * Where a *brand-new* account lands the moment onboarding finishes (TUP-8).
+ *
+ * `sanitizeNextPath` decides whether a destination is safe; this decides
+ * whether it's worth going to. Profile was neither: 43 people finished
+ * onboarding, landed on /profile, looked at a page listing what they'd just
+ * typed in, and left after ~7 seconds. It's a glance-and-leave dead end for
+ * someone who has never seen the app.
+ *
+ * GOING is the action that makes the product work, and it lives on the feed
+ * (headliner card) and the party page (sticky action bar) — so we rewrite
+ * /profile and /onboarding destinations to '/' and let everything else
+ * through untouched. A student who tapped a party before signing up still
+ * gets dropped back on that party with GOING right there.
+ *
+ * Note this only governs the onboarding exit. A returning user tapping the
+ * account tab still reaches /profile normally.
+ */
+export function postOnboardingPath(raw: string | null | undefined): string {
+  const next = sanitizeNextPath(raw);
+  if (
+    next === '/profile' ||
+    next.startsWith('/profile/') ||
+    next.startsWith('/profile?') ||
+    next.startsWith('/onboarding')
+  ) {
+    return '/';
+  }
+  return next;
+}
+
 export function partyPath(partyId: string): string {
   return `/party/${partyId}`;
 }
