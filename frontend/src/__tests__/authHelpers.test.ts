@@ -8,6 +8,7 @@ import {
   microsoftCallbackUrl,
   onboardingPath,
   partyHref,
+  postOnboardingPath,
   sanitizeNextPath,
 } from '@/lib/authHelpers';
 
@@ -59,6 +60,33 @@ describe('onboardingPath', () => {
     expect(onboardingPath('/')).toBe('/onboarding');
     expect(onboardingPath('/onboarding')).toBe('/onboarding');
     expect(onboardingPath('https://evil.com')).toBe('/onboarding');
+  });
+});
+
+describe('postOnboardingPath', () => {
+  it('sends a finished account to the surface it came from', () => {
+    expect(postOnboardingPath('/party/abc')).toBe('/party/abc');
+    expect(postOnboardingPath('/map?party=abc')).toBe('/map?party=abc');
+    expect(postOnboardingPath('/create')).toBe('/create');
+    expect(postOnboardingPath('/become-host')).toBe('/become-host');
+  });
+
+  // /profile was the dead end TUP-8 exists to kill: nothing to do there for
+  // someone who just filled the profile in. Home has the headliner GOING.
+  it('rewrites the profile dead end to the feed', () => {
+    expect(postOnboardingPath('/profile')).toBe('/');
+    expect(postOnboardingPath('/profile/edit')).toBe('/');
+    expect(postOnboardingPath('/profile?tab=x')).toBe('/');
+  });
+
+  it('never loops back into onboarding', () => {
+    expect(postOnboardingPath('/onboarding')).toBe('/');
+  });
+
+  it('still refuses open redirects and a missing next', () => {
+    expect(postOnboardingPath('https://evil.com')).toBe('/');
+    expect(postOnboardingPath('//evil.com')).toBe('/');
+    expect(postOnboardingPath(null)).toBe('/');
   });
 });
 

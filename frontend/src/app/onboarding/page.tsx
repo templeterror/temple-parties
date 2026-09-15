@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { authApi } from '@/services/api';
 import Wordmark from '@/components/ui/Wordmark';
-import { sanitizeNextPath } from '@/lib/authHelpers';
+import { postOnboardingPath } from '@/lib/authHelpers';
 import {
   ONBOARDING_STEPS,
   GRAD_YEARS,
@@ -41,10 +41,16 @@ function toProfileUser(user: AuthUser): User {
  * shell and had to wait for JS before painting anything (TUP-15). Reading
  * `window.location` is client-only, so we guard for the server render and
  * fall back to '/', which is what an absent `next` sanitizes to anyway.
+ *
+ * `postOnboardingPath` (not plain `sanitizeNextPath`) does the reading, so a
+ * finished account never lands on the /profile dead end — see TUP-8. Every
+ * consumer of this helper wants that same rule: the already-onboarded
+ * redirect, the finish handler, and the logged-out /login bounce below
+ * (which still substitutes '/onboarding' when there's nowhere to go back to).
  */
 function readNextPath(): string {
   if (typeof window === 'undefined') return '/';
-  return sanitizeNextPath(new URLSearchParams(window.location.search).get('next'));
+  return postOnboardingPath(new URLSearchParams(window.location.search).get('next'));
 }
 
 /**
@@ -147,14 +153,20 @@ function OnboardingFlow() {
 
   const finishOnboarding = useCallback(async () => {
     if (user?.id) writeOnboardingComplete(user.id);
+    // Resolve the destination once and both tag and navigate with it, so the
+    // analytics value can never drift from where the user actually ended up.
+    const safeNext = readNextPath();
     trackEvent('onboarding_completed', {
       has_avatar: !!(pendingBlob || user?.avatarUrl),
       has_greek_life: !!greekLife.trim(),
       has_instagram: !!instagram.trim(),
+      // Which GOING surface they landed on (TUP-8) — lets the PostHog funnel
+      // answer "did sending them somewhere with a GOING button actually help?"
+      landing: safeNext.startsWith('/party/') ? 'party' : safeNext === '/' ? 'feed' : 'other',
     });
     await refreshUser();
     setFlowActive(false);
-    router.replace(readNextPath());
+    router.replace(safeNext);
   }, [greekLife, instagram, pendingBlob, refreshUser, router, user?.avatarUrl, user?.id]);
 
   const goNext = useCallback(() => {
