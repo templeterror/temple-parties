@@ -131,3 +131,48 @@ describe('InviteModal', () => {
     expect(onShare).not.toHaveBeenCalled();
   });
 });
+
+/**
+ * Regression (TUP-13 follow-up): on Home the drawer's party comes from a
+ * `lastGoingPartyId` lookup, not from a prop object. That id is set in
+ * handleGoingClick — but a logged-out tap goes to /login first, so the GOING
+ * is *replayed* after auth and handleGoingClick never runs. The replay has to
+ * supply the id too, or the drawer opens on a null party and shows the
+ * generic copy instead of the party the user actually tapped.
+ */
+describe('Home invite drawer after a replayed GOING', () => {
+  /** The exact lookup app/page.tsx does when building InviteModal's `party`. */
+  const lookup = (lastGoingPartyId: string | null, parties: Party[]) =>
+    lastGoingPartyId ? parties.find((p) => p.id === lastGoingPartyId) ?? null : null;
+
+  const feed = [
+    makeParty({ id: 'p-popular', title: 'Big Room', goingCount: 300 }),
+    makeParty({ id: 'p-tapped', title: 'Diamond St Darty', goingCount: 12 }),
+  ];
+
+  it('shows the replayed party, not generic copy', () => {
+    // What the replay effect now records from the pending action.
+    const replayed = { type: 'going' as const, partyId: 'p-tapped' };
+
+    render(
+      <InviteModal
+        isOpen
+        onClose={jest.fn()}
+        onShare={jest.fn()}
+        party={lookup(replayed.partyId, feed)}
+      />,
+    );
+
+    expect(screen.getByText('Diamond St Darty')).toBeTruthy();
+    expect(screen.queryByText('Send the link so your friends pull up too.')).toBeNull();
+    // Not the highest going-count party — the one that was actually tapped.
+    expect(screen.queryByText('Big Room')).toBeNull();
+  });
+
+  it('would fall back to generic copy if the replay forgot the id', () => {
+    render(<InviteModal isOpen onClose={jest.fn()} onShare={jest.fn()} party={lookup(null, feed)} />);
+
+    expect(screen.getByText('Send the link so your friends pull up too.')).toBeTruthy();
+    expect(screen.queryByText('Diamond St Darty')).toBeNull();
+  });
+});
