@@ -255,6 +255,7 @@ export default function HomePage() {
         isOpen={showInviteModal}
         onClose={closeInviteModal}
         onShare={handleShare}
+        party={lastGoingPartyId ? allParties.find((p) => p.id === lastGoingPartyId) ?? null : null}
       />
 
       {ratingModalParty && (

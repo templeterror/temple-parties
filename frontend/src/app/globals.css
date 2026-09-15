@@ -504,19 +504,22 @@ html {
 }
 
 /*
- * Apple-style frost, shared by the Saturday host prompt and the map
- * PartySheet. Both are fixed overlays on a dedicated layer (not scrolling
- * surfaces), so the live-blur ban in DESIGN.md does not apply. The values
- * live here once — the two surfaces comma-join onto these rules rather
- * than copying declarations, so the material can never drift apart.
+ * Apple-style frost, shared by the Saturday host prompt, the map
+ * PartySheet, and the post-GOING InviteModal. All three are fixed overlays
+ * on a dedicated layer (not scrolling surfaces), so the live-blur ban in
+ * DESIGN.md does not apply. The values live here once — the sheets
+ * comma-join onto these rules rather than copying declarations, so the one
+ * frost recipe can never drift apart.
  */
 .host-tonight-prompt,
-.party-sheet {
+.party-sheet,
+.invite-sheet {
   isolation: isolate;
 }
 
 .host-tonight-prompt__glass,
-.party-sheet__glass {
+.party-sheet__glass,
+.invite-sheet__glass {
   position: absolute;
   inset: 0;
   border-radius: 24px 24px 0 0;
@@ -535,7 +538,8 @@ html {
 
 @media (prefers-reduced-transparency: reduce) {
   .host-tonight-prompt__glass,
-  .party-sheet__glass {
+  .party-sheet__glass,
+  .invite-sheet__glass {
     background: #252528;
     backdrop-filter: none;
     -webkit-backdrop-filter: none;
@@ -551,7 +555,8 @@ html {
  * read grey on the sheet). No outer glow.
  */
 .host-tonight-prompt__cta,
-.party-sheet__cta {
+.party-sheet__cta,
+.invite-sheet__cta {
   position: relative;
   overflow: hidden;
   isolation: isolate;
@@ -571,7 +576,8 @@ html {
 }
 
 .host-tonight-prompt__cta::before,
-.party-sheet__cta::before {
+.party-sheet__cta::before,
+.invite-sheet__cta::before {
   content: '';
   position: absolute;
   inset: 0 auto auto 0;
@@ -582,7 +588,8 @@ html {
 }
 
 .host-tonight-prompt__cta:hover,
-.party-sheet__cta:hover {
+.party-sheet__cta:hover,
+.invite-sheet__cta:hover {
   border-color: rgba(224, 212, 255, 0.72);
   background-image: linear-gradient(
     180deg,
@@ -592,7 +599,8 @@ html {
 }
 
 .host-tonight-prompt__cta:active,
-.party-sheet__cta:active {
+.party-sheet__cta:active,
+.invite-sheet__cta:active {
   transform: scale(0.98);
 }
 
@@ -600,7 +608,9 @@ html {
   .host-tonight-prompt__cta,
   .host-tonight-prompt__cta:active,
   .party-sheet__cta,
-  .party-sheet__cta:active {
+  .party-sheet__cta:active,
+  .invite-sheet__cta,
+  .invite-sheet__cta:active {
     transition: none;
     transform: none;
   }
@@ -608,7 +618,8 @@ html {
 
 @media (prefers-reduced-transparency: reduce) {
   .host-tonight-prompt__cta,
-  .party-sheet__cta {
+  .party-sheet__cta,
+  .invite-sheet__cta {
     background: var(--purple-primary);
     backdrop-filter: none;
     -webkit-backdrop-filter: none;
@@ -617,7 +628,8 @@ html {
   }
 
   .host-tonight-prompt__cta::before,
-  .party-sheet__cta::before {
+  .party-sheet__cta::before,
+  .invite-sheet__cta::before {
     display: none;
   }
 }

@@ -95,7 +95,11 @@ rankings pieces `RankChampionCard` / `RankingRow` / `HostRankingRow`, and
 `HostTonightPrompt` (bottom drawer that replaces the mobile tab bar,
 same as `PartySheet` on the map; hosts/admins once per day Wed–Sat,
 everyone else once on Friday; swipe down or Escape to dismiss — no ✕;
-hosts go to `/create`, everyone else to `/become-host`).
+hosts go to `/create`, everyone else to `/become-host`), and
+`InviteModal` (the post-GOING share drawer — same frost as the host
+prompt, a poster thumb + title/host/day @ door time line for the party
+just RSVP'd to, a frost-on-primary "Share with friends" CTA, and
+swipe-down / Escape / backdrop dismiss).
 
 ## Card anatomy (the feed)
 
@@ -187,3 +191,4 @@ server-side, surfaced as toast, never preached in copy) → sticky bar.
 | 2026-09-10 | Host prompt sheet sits on the bottom of the screen and replaces the mobile tab bar while open (same pattern as map `PartySheet`). Desktop top bar stays. |
 | 2026-09-10 | Host prompt CTA is frost on primary (`#b24bf3` fill, specular edge, no glow) — no TONIGHT eyebrow. `prefers-reduced-transparency` stays solid `temple-purple`. |
 | 2026-09-13 | Map `PartySheet` takes the host prompt's frost material (owner, TUP-22): same glass layer, light-purple grabber, and frost-on-primary GOING, plus translucent light-purple stat tiles. The `.party-sheet*` selectors comma-join onto the existing `.host-tonight-prompt*` rules — one set of declarations, no copies. Information structure, copy, buttons, callbacks, drag thresholds, and accessibility are unchanged; `prefers-reduced-transparency` falls back to solid `#252528`. |
+| 2026-09-15 | `InviteModal` (post-GOING) rebuilt as a bottom drawer in the shared frost (TUP-13): drops `ModalWrapper`, the party emoji, and the raw-hex share button. Shows the party it was opened for — poster thumb, title, host, day @ door time, and a going count only when the server gave one (null stays null, never a fake 0). CTA is frost on primary with `ShareIcon` + "Share with friends"; "Maybe later", the backdrop, Escape, and a >90px downward swipe all dismiss. The `.invite-sheet*` selectors comma-join onto the existing `.host-tonight-prompt*` rules — still one set of declarations. `isOpen`/`onClose`/`onShare` contract and each caller's share toast are unchanged. |

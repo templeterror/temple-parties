@@ -399,7 +399,12 @@ export default function PartyPage() {
           </button>
         </StickyActionBar>
 
-        <InviteModal isOpen={showInviteModal} onClose={closeInviteModal} onShare={() => handleShare('invite_modal')} />
+        <InviteModal
+          isOpen={showInviteModal}
+          onClose={closeInviteModal}
+          onShare={() => handleShare('invite_modal')}
+          party={party}
+        />
 
         <Toast message={toast.message} isVisible={toast.isVisible} onClose={toast.hide} />
       </RequireOnboarding>
