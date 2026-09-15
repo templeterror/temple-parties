@@ -167,6 +167,7 @@ export default function DemoHomePage() {
         isOpen={showInviteModal}
         onClose={() => setShowInviteModal(false)}
         onShare={handleShare}
+        party={lastGoingPartyId ? allParties.find((p) => p.id === lastGoingPartyId) ?? null : null}
       />
 
       <Toast message={toast.message} isVisible={toast.isVisible} onClose={toast.hide} />

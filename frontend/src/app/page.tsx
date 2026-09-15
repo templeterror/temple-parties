@@ -71,6 +71,10 @@ export default function HomePage() {
     void (async () => {
       const action = await replayPendingAuthAction();
       if (action?.type === 'going') {
+        // Remember which party the replayed GOING was for. Without this the
+        // invite drawer opens with no party (the tap happened before login,
+        // so handleGoingClick never ran) and falls back to generic copy.
+        setLastGoingPartyId(action.partyId);
         showToast("You're marked as going!");
       }
     })();
@@ -255,6 +259,7 @@ export default function HomePage() {
         isOpen={showInviteModal}
         onClose={closeInviteModal}
         onShare={handleShare}
+        party={lastGoingPartyId ? allParties.find((p) => p.id === lastGoingPartyId) ?? null : null}
       />
 
       {ratingModalParty && (
