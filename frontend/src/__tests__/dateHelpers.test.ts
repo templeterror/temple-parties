@@ -16,6 +16,7 @@ import {
   getSaturdayWindowISO,
   getPromptCadenceDay,
   getRolledDateISO,
+  getLastCompletedWeekendFridayISO,
 } from '../utils/dateHelpers';
 
 describe('dateHelpers', () => {
@@ -304,6 +305,47 @@ describe('dateHelpers', () => {
       expect(formatDoorTimeParts({ hour: 10, minute: 0, period: 'PM' })).toBe('10 PM');
       expect(formatDoorTimeParts({ hour: 8, minute: 15, period: 'PM' })).toBe('8:15 PM');
       expect(formatDoorTimeParts({ hour: 12, minute: 0, period: 'AM' })).toBe('12 AM');
+    });
+  });
+
+  describe('getLastCompletedWeekendFridayISO', () => {
+    // Sept 2026: Fri 18th, Sat 19th, Sun 20th, Mon 21st, Tue 22nd, Thu 24th.
+    // The backend returns '2026-09-18' as the current weekend key on Fri–Mon,
+    // then flips to '2026-09-25' on Tue.
+
+    it('returns the previous weekend while this one is still running', () => {
+      // Friday night and Saturday night: the 18th weekend has not happened yet
+      // / is happening now, so "last weekend" is the 11th.
+      expect(getLastCompletedWeekendFridayISO('2026-09-18', new Date(2026, 8, 18, 21)))
+        .toBe('2026-09-11');
+      expect(getLastCompletedWeekendFridayISO('2026-09-18', new Date(2026, 8, 19, 15)))
+        .toBe('2026-09-11');
+    });
+
+    it('treats Sunday before 6 AM as still Saturday night', () => {
+      expect(getLastCompletedWeekendFridayISO('2026-09-18', new Date(2026, 8, 20, 3)))
+        .toBe('2026-09-11');
+    });
+
+    it('flips to the just-finished weekend at the Sunday 6 AM rollover', () => {
+      expect(getLastCompletedWeekendFridayISO('2026-09-18', new Date(2026, 8, 20, 6)))
+        .toBe('2026-09-18');
+    });
+
+    it('returns the just-finished weekend on Monday (TUP-37)', () => {
+      // The bug: the old code subtracted 7 here and showed the 11th, even
+      // though the backend key was already the past Friday.
+      expect(getLastCompletedWeekendFridayISO('2026-09-18', new Date(2026, 8, 21, 12)))
+        .toBe('2026-09-18');
+    });
+
+    it('subtracts 7 once the server key rolls to the upcoming Friday', () => {
+      // Tue–Fri the backend returns the UPCOMING Friday (the 25th), so the
+      // last completed weekend is the 18th.
+      expect(getLastCompletedWeekendFridayISO('2026-09-25', new Date(2026, 8, 22, 12)))
+        .toBe('2026-09-18');
+      expect(getLastCompletedWeekendFridayISO('2026-09-25', new Date(2026, 8, 24, 12)))
+        .toBe('2026-09-18');
     });
   });
 });

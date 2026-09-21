@@ -323,6 +323,41 @@ export function getLastWeekendFridayISO(): string {
   return toISODate(getRankingsFriday());
 }
 
+/**
+ * Friday key of the most recently COMPLETED weekend, given the server's
+ * current weekend key.
+ *
+ * Why the server key alone is not enough: the backend's get_current_weekend()
+ * rolls Sat/Sun/Mon back to the *past* Friday, so on those days the key it
+ * returns is already the weekend we just lived through — subtracting 7 days
+ * from it (what the Ranks tab used to do) skips a weekend and shows the one
+ * before. But on Sat and on Sun before 6 AM that same key is still the
+ * IN-PROGRESS weekend (Saturday night runs until the 6 AM rollover), so there
+ * we do want the previous Friday.
+ *
+ * The rule that settles both: take the weekend's Saturday and ask whether it
+ * is strictly in the past per the 6 AM rollover. If yes the weekend is over —
+ * return the key as-is. If not it is still running (or upcoming, as on Tue–Fri
+ * when the backend returns the *upcoming* Friday) — return the key minus 7.
+ */
+export function getLastCompletedWeekendFridayISO(
+  currentWeekendOf: string,
+  now: Date = new Date(),
+): string {
+  // Parse at noon so DST shifts can never bump us onto an adjacent day.
+  const friday = new Date(`${currentWeekendOf}T12:00:00`);
+
+  const saturday = new Date(friday);
+  saturday.setDate(saturday.getDate() + 1);
+
+  // Saturday already behind us (after the 6 AM rollover) → weekend complete.
+  if (toISODate(saturday) < getRolledDateISO(now)) return currentWeekendOf;
+
+  const previousFriday = new Date(friday);
+  previousFriday.setDate(previousFriday.getDate() - 7);
+  return toISODate(previousFriday);
+}
+
 /** Get the bounding Friday ISO dates for the current calendar month. */
 export function getMonthRange(): { from: string; to: string } {
   const today = new Date();
