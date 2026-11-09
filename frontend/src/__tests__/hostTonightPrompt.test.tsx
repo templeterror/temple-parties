@@ -314,13 +314,14 @@ describe('HostTonightPrompt', () => {
     expect(screen.queryByText('Throwing a party?')).toBeNull();
   });
 
-  it('replaces the mobile tab bar while the sheet is up', () => {
+  it('replaces the mobile Dock while the sheet is up, and takes over as bottom chrome', () => {
     render(
       <AppShell>
         <div>feed</div>
       </AppShell>,
     );
     expect(document.querySelector('nav.lg\\:hidden')).toBeTruthy();
+    expect(document.querySelector('[data-bottom-chrome]')?.getAttribute('data-bottom-chrome')).toBe('dock');
 
     act(() => {
       jest.advanceTimersByTime(1100);
@@ -328,5 +329,9 @@ describe('HostTonightPrompt', () => {
 
     expect(screen.getByText('Throwing a party?')).toBeTruthy();
     expect(document.querySelector('nav.lg\\:hidden')).toBeNull();
+    // useDeckFrame sizes the deck to whatever declares data-bottom-chrome.
+    const chrome = document.querySelectorAll('[data-bottom-chrome]');
+    expect(chrome).toHaveLength(1);
+    expect(chrome[0].getAttribute('data-bottom-chrome')).toBe('host-prompt');
   });
 });

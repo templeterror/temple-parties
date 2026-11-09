@@ -21,7 +21,7 @@ export default function StatTile({
     <div
       className={`flex-1 min-w-0 flex flex-col items-center gap-[3px] py-3 rounded-[12px] bg-temple-surface ${className}`}
     >
-      <p className="font-montserrat font-bold text-[16px] text-white uppercase">{value}</p>
+      <p className="font-montserrat font-bold text-[16px] text-white uppercase tabular-nums">{value}</p>
       <p className="font-montserrat font-bold text-[9px] tracking-[0.9px] uppercase text-temple-muted">
         {label}
       </p>

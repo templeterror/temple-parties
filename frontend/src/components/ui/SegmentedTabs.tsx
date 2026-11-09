@@ -26,7 +26,7 @@ export default function SegmentedTabs({ items, activeKey, onChange }: SegmentedT
             type="button"
             onClick={() => onChange(item.key)}
             aria-pressed={active}
-            className={`flex-1 py-2.5 rounded-[9px] font-montserrat font-bold text-[13px] uppercase transition-all duration-200 ${
+            className={`flex-1 min-h-11 py-2.5 rounded-[9px] font-montserrat font-bold text-[13px] uppercase transition-colors duration-150 ease-out motion-reduce:transition-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white ${
               active ? 'bg-temple-purple text-white' : 'text-temple-muted hover:text-white/80'
             }`}
           >

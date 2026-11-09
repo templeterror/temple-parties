@@ -10,11 +10,11 @@
 
 | Token | Value | Role |
 |---|---|---|
-| `temple-purple` | `#b24bf3` | Primary. Actions (GOING, tabs, category chips), active nav, links |
+| `temple-purple` | `#b24bf3` | Primary. Actions (GOING, tabs, category chips on the hero + detail page), active nav, links. On the compact card GOING is the only purple block |
 | `temple-purple-light` | `#e0d4ff` | Secondary. Navigate buttons, host lines, cast-vote fill, COPY |
 | `temple-hyped` | `var(--temple-hyped)` = `#FFD60A` | The HEADLINER badge. **The app's ONE glow** — nothing else glows |
 | `temple-hyped-ink` | `var(--temple-hyped-ink)` = `#0a0a0f` | Text on the hyped yellow |
-| `temple-surface` | `#1a1a1d` | Flat modules (nav bar, tabs container, detail-page cards) |
+| `temple-surface` | `#1a1a1d` | Flat modules (the Dock pill, tabs container, detail-page cards) |
 | `temple-surface-2` | `#252528` | Feed cards (with `border-white/10` hairline) |
 | `temple-muted` | `#9a9a9a` | Secondary text, section labels, idle icons |
 | base | `#000` | Page background |
@@ -92,7 +92,7 @@ Fishtown, Drexel/UCity, Lincoln Financial, Center City).
 Also in the kit:
 `AddressAutocomplete` (shared by create-party + become-host), the
 rankings pieces `RankChampionCard` / `RankingRow` / `HostRankingRow`, and
-`HostTonightPrompt` (bottom drawer that replaces the mobile tab bar,
+`HostTonightPrompt` (bottom drawer that replaces the mobile Dock,
 same as `PartySheet` on the map; hosts/admins once per day Wed–Sat,
 everyone else once on Friday; swipe down or Escape to dismiss — no ✕;
 hosts go to `/create`, everyone else to `/become-host`), and
@@ -101,27 +101,69 @@ prompt, a poster thumb + title/host/day @ door time line for the party
 just RSVP'd to, a frost-on-primary "Share with friends" CTA, and
 swipe-down / Escape / backdrop dismiss).
 
+## Nav chrome (mobile)
+
+Spec in the 2026-11-07 "Nav chrome → Dock + slim Classic top" decision row.
+
+- **Dock** (`components/BottomNav.tsx`; desktop keeps its top bar): a
+  floating pill above the safe area — `temple-surface`, `ring-white/10`
+  hairline, no glass, a black drop shadow only for separation over
+  scrolling content. 44px targets (48px idle, active grows to icon +
+  label), label only on the active tab, `aria-current="page"`, white
+  focus ring, `dock-press` scale(0.96) press (off under reduced motion),
+  idle hover only for fine pointers. Icons: the Figma files in
+  `public/icons` (`-active` file when active; idle drawn as a white CSS
+  mask so it reads on black); Profile keeps its inline glyph. `/demo/*`
+  swaps links to demo twins and drops Profile. Footprint is CSS:
+  `--dock-pill` (52px) + `--dock-inset` (safe area, 12px floor) =
+  `--dock-footprint`; scrolling pages pad with `pb-[var(--dock-clearance)]`
+  (footprint + 24px), the map wrapper with footprint + 8px. Sheets
+  (HostTonightPrompt, map PartySheet) and pushed routes
+  (`AppShell hideBottomNav`) replace it.
+- **Slim top** (`Header` + `DayTabs`): wordmark row padded by
+  `max(safe-area-inset-top, 12px)` (was a fixed 40px), then the
+  full-width THU/FRI/SAT `SegmentedTabs` with tight outer padding; segments
+  stay ≥ 44px. Desktop spacing unchanged.
+
 ## Card anatomy (the feed)
 
-Both cards share one props contract — `FeedCardProps`, exported from
-`PartyCard.tsx`. Pages build one props object per party and pick a card.
+Home is **`PartyDeck`** (`components/feed/`), spec in the 2026-11-07
+"Feed cards → Deck" decision row. One party per screen, native
+scroll-snap, ranked by `rankParties` in `utils/partyDeck.ts` (going count
+desc, live overlay incl. your RSVP; ties and logged-out keep server order).
+The deck sizes itself between the day tabs and the bottom chrome (the Dock
+or HostTonightPrompt) so Home never scrolls vertically: bottom chrome
+declares itself with `data-bottom-chrome` and `useDeckFrame` reserves that
+element's own height (the Dock floats with a gap, so nothing is inferred
+from what touches the screen edge). Tapping Home on Home jumps to #1
+(`HomeReselect` context, emitted by the Dock, heard by `PartyDeck`).
 
-- **HeadlinerCard** (the night's top party): full-width StagePoster, badge row
-  (`HEADLINER` yellow + category chip), uppercase title, host, time ·
-  address(gate) + votes, full-width GOING bar + navigate.
-- **PartyCard** (everything else): 42% poster pane, category chip + chevron,
-  title, host, time + votes on one left-grouped row, GOING bar + navigate.
-  No fixed height — content sizes the card. No address on the card (the
-  detail page owns it).
+- **RankStrip**: flyer thumbs 1…N, current ringed, tap to jump. (When the
+  sponsor slide is on, a narrow muted `Ad` marker sits in its position.)
+- **DeckCard**: whole flyer (`next/image fill` + `object-contain`) on blurred
+  wings of itself → info panel on a scrim: a label eyebrow, no boxes ("Quiet")
+  — `#1 tonight` as yellow text on the top party (`white/60` on a past night),
+  a middle dot, then the category in muted 12px caps (`white/50` on a past
+  night; `Other` shows nothing) — and `N going`, title, host line (`% liked` only when `hostStats` exists),
+  facts (`Live now` / `Doors 10 PM` / `Ended` · price · walk from the Bell
+  Tower), controls `I'm going` / `Going ✓`, directions (page callback +
+  `openMapsDirections` when the address is known), `Details`. Past cards
+  swap the controls for votes. No poster → typographic tile.
+- **SponsorSlide**: **currently off** (owner, 2026-11-07) — commented out
+  at the `sponsor` prop in `app/page.tsx` and `app/demo/page.tsx`. When on,
+  it is its own slide after #1, same content/link/event as `SponsoredSlot`
+  (`openSponsor`).
 
-Interaction rule: **the whole card is one tap target** (stretched invisible
-Link, z-1) opening `/party/[id]`; only the GOING/navigate action row floats
-above it (z-2). Vote rows on cards are read-only — rating happens on the
-detail page. Never nest a `<button>` inside a `<Link>` (§8.9).
+A11y: carousel region, slides labelled by party position only ("2 of 7"),
+off-screen slides `inert`, polite live region, prev/next only for fine
+pointers or keyboard focus, ←/→ never hijacked. Pure helpers (phase in ET,
+walk, price, `formatGoing`) are tested in `__tests__/partyDeck.test.ts`.
+Analytics: `deck_card_viewed { partyId, rank, day }` once per card per
+day-view, plus the page's existing events.
 
 ## Party detail page (WF-D)
 
-Pushed route: back arrow over the hero, no mobile tab bar
+Pushed route: back arrow over the hero, no mobile Dock
 (`AppShell hideBottomNav`), sticky action bar (GOING 70% / navigate 30%;
 ticketed = GOING outline + BUY TICKETS primary). Order: hero → tags
 (`HEADLINER` when `isHeadliner`, category) → title → HostRow (cred line from
@@ -192,3 +234,9 @@ server-side, surfaced as toast, never preached in copy) → sticky bar.
 | 2026-09-10 | Host prompt CTA is frost on primary (`#b24bf3` fill, specular edge, no glow) — no TONIGHT eyebrow. `prefers-reduced-transparency` stays solid `temple-purple`. |
 | 2026-09-13 | Map `PartySheet` takes the host prompt's frost material (owner, TUP-22): same glass layer, light-purple grabber, and frost-on-primary GOING, plus translucent light-purple stat tiles. The `.party-sheet*` selectors comma-join onto the existing `.host-tonight-prompt*` rules — one set of declarations, no copies. Information structure, copy, buttons, callbacks, drag thresholds, and accessibility are unchanged; `prefers-reduced-transparency` falls back to solid `#252528`. |
 | 2026-09-15 | `InviteModal` (post-GOING) rebuilt as a bottom drawer in the shared frost (TUP-13): drops `ModalWrapper`, the party emoji, and the raw-hex share button. Shows the party it was opened for — poster thumb, title, host, day @ door time, and a going count only when the server gave one (null stays null, never a fake 0). CTA is frost on primary with `ShareIcon` + "Share with friends"; "Maybe later", the backdrop, Escape, and a >90px downward swipe all dismiss. The `.invite-sheet*` selectors comma-join onto the existing `.host-tonight-prompt*` rules — still one set of declarations. `isOpen`/`onClose`/`onShare` contract and each caller's share toast are unchanged. |
+| 2026-11-07 | Compact card unslop pass (owner): category chip demoted to a muted label and chevron removed so GOING is the only purple block; title clamps to 2 lines (was 1-line truncate); votes hidden before the rating window opens when no one has voted. Supersedes the "category chip + chevron" part of 2026-08-17. Headliner card unchanged. |
+| 2026-11-07 | **Feed cards → Deck** (owner, from `/proto/cards`, 5 variants; audit in `feed-card-audit.md`). Home is one party per screen, swiped horizontally (native scroll-snap) in going-count order, high → low (your own RSVP counts; ties keep server order; logged out keeps the server order). Above it a rank strip of flyer thumbnails 1…N (tap to jump; current ringed; #1 chip yellow). Each card: the whole flyer (`object-contain`, never cropped) on static blurred wings of itself, then a fixed info panel — `#1 tonight` chip (hyped yellow, top party on tonight only — not on past nights) or `#N of M`, title (2 lines, balanced), host line (seal, crown, `92% liked`), facts (`Live now` / `Doors 10 PM` / `Ended` · price · `6 min walk`), `N going` (tabular; `—` logged out), and controls: `I'm going` / `Going ✓` (the one primary), 44px directions, `Details`. Past nights: `Ended`, `N went`, votes, Details only. Sponsor is its own slide right after #1 (owner). Prev/next buttons only for fine pointers; ←/→ not hijacked. **Rejected:** *Current* (ten filled buttons per screen, cropped flyers, invisible ranking); *Flyer* (≈1 party per screen with no rank overview, tall flyers letterboxed); *Ranked* (flyer demoted to a 56px thumb, vibe second); *Tonight* (most structure, ~199px text column clamps titles, weak on nights that haven't started). Supersedes the 2026-08-17 card anatomy and the 2026-11-07 compact-card unslop row. |
+| 2026-11-07 | **Nav chrome → Dock + slim Classic top** (owner, from `/proto/nav`, 7 variants). Bottom: the mobile tab bar becomes a detached floating pill dock above the safe area — solid `temple-surface`, hairline ring, no glass — with the four Figma icons from `public/icons` (idle drawn as a white mask so it reads on black), label shown only on the active tab; tapping Home while on Home jumps the deck back to #1. Top: today's wordmark row + full-width THU/FRI/SAT tabs, kept but slimmer (owner) — less header padding and tighter spacing, tabs still ≥ 44px. Host prompt / map PartySheet still replace the bottom bar while open; party pages still hide it. **Rejected:** *Current* (≈214px of chrome; 203px flyer on a 667 phone); *Dock* with its one-row wordmark + small day pill top (owner: dock yes, that top no); *Thumb* (no brand on Home, five controls in one row); *Top* (nav out of thumb reach on Home, inconsistent across routes); *+Days* and *+Strip* (no brand on Home; +Strip crowds days into the thumb strip). |
+| 2026-11-07 | **Feed sponsor slide off** (owner: "we don't need it"). The SponsorSlide and its `Ad` marker are commented out (not deleted) at the `sponsor` prop in `app/page.tsx` and `app/demo/page.tsx`; restore by uncommenting. Map sponsor pin and SponsorReminderModal are unchanged. Supersedes the sponsor-as-slide part of the Deck row. |
+| 2026-11-08 | Deck cards label the party by **category chip** instead of `#N of M` (owner). Rank lives in the rank strip; the top party keeps `#1 tonight` in front of its category chip. Category chip: party-page tag metrics (4px corners, 11px bold uppercase), `temple-purple`, muted on past nights. |
+| 2026-11-08 | **Deck card labels → Quiet** (owner, from `/proto/chips`, 4 variants). No containers: the category is a muted 12px semibold caps eyebrow (tracking 0.08em, `temple-muted`; `white/50` on past nights), and the top party gets yellow `#1 tonight` text (bold, `temple-hyped` as a text colour only — no box, no glow; `white/60` on past nights) joined by a middle dot. Category `Other` shows no label. Weakest label contrast 5.3:1. **Rejected:** *Current* purple chips (white on `#b24bf3` = 4.04:1, fails 4.5:1; three loud blocks with the I'm going button); *Outline* ghost pills (read as tappable next to the outlined directions/Details buttons; breaks the 4px chip rule); *On-flyer* corner tags (+30px flyer, but cover the host's own header text on most posters). Supersedes the 2026-11-08 category-chip row. |

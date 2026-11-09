@@ -12,8 +12,12 @@
  * as a pair at the same height, so change both or neither. The mark carries
  * no margin of its own: the host row owns the spacing (`gap-1`).
  *
- * On phones (no hover) a tap explains the badge via toast; on desktop the
- * title tooltip does that job, so the cursor stays default.
+ * Two modes, picked by whether `onShowToast` is passed:
+ *  - with it (party-page HostRow): a real <button> — on phones (no hover) a
+ *    tap explains the badge via toast; on desktop the title tooltip does that
+ *    job, so the cursor stays default.
+ *  - without it (feed cards): a static, non-interactive mark. The card is one
+ *    tap target, same as the crown there.
  */
 
 /** The scalloped-seal outline: 12 outward arcs meeting at r≈9.6 in a 24-box. */
@@ -63,14 +67,30 @@ export default function VerifiedMark({
   size?: number;
   className?: string;
 }) {
-  return (
-    <span
-      title="Verified host"
-      onClick={() => onShowToast?.('Verified host')}
-      className={`shrink-0 inline-flex items-center cursor-pointer lg:cursor-default ${className}`}
-    >
+  const seal = (
+    <>
       <VerifiedSealIcon size={size} />
       <span className="sr-only">Verified</span>
-    </span>
+    </>
+  );
+
+  if (!onShowToast) {
+    return (
+      <span title="Verified host" className={`shrink-0 inline-flex items-center ${className}`}>
+        {seal}
+      </span>
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      title="Verified host"
+      aria-label="Verified host"
+      onClick={() => onShowToast('Verified host')}
+      className={`shrink-0 inline-flex items-center cursor-pointer lg:cursor-default ${className}`}
+    >
+      {seal}
+    </button>
   );
 }

@@ -1,21 +1,18 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import Header from '@/components/Header';
 import DayTabs from '@/components/DayTabs';
-import PartyCard from '@/components/PartyCard';
-import HeadlinerCard from '@/components/HeadlinerCard';
-import SponsoredSlot from '@/components/SponsoredSlot';
-import SectionLabel from '@/components/ui/SectionLabel';
+import PartyDeck from '@/components/feed/PartyDeck';
+import PartyDeckSkeleton from '@/components/feed/PartyDeckSkeleton';
 import InviteModal from '@/components/InviteModal';
-import RatingModal from '@/components/RatingModal';
 import RatingReminderModal from '@/components/RatingReminderModal';
 import EmptyState from '@/components/EmptyState';
 import Toast from '@/components/Toast';
 import AppShell from '@/components/AppShell';
 import PageSkeleton from '@/components/PageSkeleton';
 import RequireOnboarding from '@/components/RequireOnboarding';
-import { getAlsoTonightLabel, getDefaultDay, pickSmartDefaultDay } from '@/utils/dateHelpers';
+import { getDefaultDay, pickSmartDefaultDay } from '@/utils/dateHelpers';
 import { shareContent } from '@/utils/shareHelpers';
 import useGoingStatus from '@/hooks/useGoingStatus';
 import useRatingStatus from '@/hooks/useRatingStatus';
@@ -26,22 +23,26 @@ import useAddressVisibility from '@/hooks/useAddressVisibility';
 import useRatingReminder from '@/hooks/useRatingReminder';
 import { trackEvent } from '@/utils/analytics';
 import { useAuth } from '@/contexts/AuthContext';
+// SPONSOR (disabled by owner 2026-11-07 — restore by uncommenting this import and the `sponsor` prop on PartyDeck below):
+// import { PRIMARY_SPONSOR } from '@/lib/sponsors';
 import type { PartyDay } from '@/lib/types';
+
+/** The deck's live/ended labels follow the real clock; a minute is fine-grained enough. */
+const CLOCK_TICK_MS = 60_000;
 
 export default function HomePage() {
   const { isAuthenticated, isLoading: authLoading, needsOnboarding } = useAuth();
   const [selectedDay, setSelectedDay] = useState<PartyDay>(() => getDefaultDay());
   const [isHydrated, setIsHydrated] = useState(false);
-  const [ratingModalParty, setRatingModalParty] = useState<{ id: string; title: string; host: string } | null>(null);
+  const [now, setNow] = useState(() => new Date());
   const [lastGoingPartyId, setLastGoingPartyId] = useState<string | null>(null);
 
   const { goingParties, isGoing, getCount, toggleGoing, ensureGoing } = useGoingStatus();
   const { getUserRating, getLikePercentage, getRatingCount, submitRating } = useRatingStatus();
-  const { isAddressVisible, revealAddress } = useAddressVisibility();
+  const { revealAddress } = useAddressVisibility();
   const {
     filteredParties,
     allParties,
-    topPartyId,
     isLoadingParties,
     dayCounts,
     thursdayDate,
@@ -60,7 +61,6 @@ export default function HomePage() {
     closeInviteModal,
     openLogin,
     requireAuthForGoing,
-    requireAuthForRating,
     replayPendingAuthAction,
   } = modals;
 
@@ -83,6 +83,11 @@ export default function HomePage() {
   useEffect(() => {
     setSelectedDay(getDefaultDay());
     setIsHydrated(true);
+  }, []);
+
+  useEffect(() => {
+    const id = window.setInterval(() => setNow(new Date()), CLOCK_TICK_MS);
+    return () => window.clearInterval(id);
   }, []);
 
   const hasAppliedSmartDefault = useRef(false);
@@ -144,68 +149,29 @@ export default function HomePage() {
     }
   }, [lastGoingPartyId, allParties, topGoingParty, showToast]);
 
-  const handleStarClick = useCallback((partyId: string, title: string, host: string, ratingActive: boolean, ratingLocked: boolean) => {
-    if (requireAuthForRating()) return;
-    if (!ratingActive) {
-      showToast('Ratings unlock when doors open');
-      return;
-    }
-    if (ratingLocked) {
-      showToast('Ratings are now closed');
-      return;
-    }
-    setRatingModalParty({ id: partyId, title, host });
-  }, [showToast, requireAuthForRating]);
-
-  const handleModalRate = useCallback(async (rating: number) => {
-    if (!ratingModalParty) return;
-    await submitRating(ratingModalParty.id, rating);
-    trackEvent('party_rated', { partyId: ratingModalParty.id, rating, source: 'modal' });
-  }, [ratingModalParty, submitRating]);
-
   const handleReminderRate = useCallback(async (rating: number) => {
     if (!currentPrompt) return;
     await submitRating(currentPrompt.id, rating);
     trackEvent('party_rated', { partyId: currentPrompt.id, rating, source: 'reminder' });
   }, [currentPrompt, submitRating]);
 
-  // The feed splits into the headliner (the day's top party — HeadlinerCard)
-  // and the rest (compact PartyCards). Both cards take the same props, built
-  // once here — that's the "wire it up" contract.
-  const headliner = filteredParties.find((p) => p.id === topPartyId) ?? filteredParties[0];
-  const rest = headliner ? filteredParties.filter((p) => p.id !== headliner.id) : [];
-  const feedCardProps = (party: typeof filteredParties[number]) => ({
-    id: party.id,
-    title: party.title,
-    host: party.host,
-    category: party.category,
-    doorsOpen: party.doorsOpen,
-    address: party.address,
-    goingCount: party.goingCount,
-    isHyped: party.id === topPartyId,
-    userIsGoing: isGoing(party.id),
-    onGoingClick: handleGoingClick,
-    onNavigateClick: handleNavigateClick,
-    isAddressVisible: isAddressVisible(party.id),
-    onViewAddressClick: handleViewAddress,
-    // Soft-gate: when the server nulled the counts (logged out) we pass the
-    // null straight through so cards show dashes — the overlay getters would
-    // otherwise coerce it to a fake 0.
-    likePercentage: party.likePercentage === null ? null : getLikePercentage(party.id, party.likePercentage),
-    ratingCount: party.ratingCount === null ? null : getRatingCount(party.id, party.ratingCount),
-    userRating: getUserRating(party.id),
-    onRateClick: handleStarClick,
-    isRatingActive: party.ratingOpen ?? false,
-    isRatingLocked: party.ratingLocked ?? false,
-    isVerified: party.isVerified,
-    posterImage: party.posterImage,
-    onShowToast: showToast,
-  });
+  // The deck ranks and renders the night itself. Rating numbers carry the
+  // local overlay (they move the moment you rate from the reminder); a
+  // server-nulled count stays null (soft-gate) instead of becoming a fake 0.
+  const deckParties = useMemo(
+    () =>
+      filteredParties.map((party) => ({
+        ...party,
+        likePercentage: party.likePercentage === null ? null : getLikePercentage(party.id, party.likePercentage),
+        ratingCount: party.ratingCount === null ? null : getRatingCount(party.id, party.ratingCount),
+      })),
+    [filteredParties, getLikePercentage, getRatingCount],
+  );
 
   if (!isHydrated) {
     return (
       <AppShell>
-        <PageSkeleton />
+        <PageSkeleton deck />
       </AppShell>
     );
   }
@@ -213,7 +179,7 @@ export default function HomePage() {
   return (
     <AppShell>
       <RequireOnboarding>
-      <div className="pb-24 lg:pb-8">
+      <div className="pb-[var(--dock-clearance)] lg:pb-8">
         <Header />
 
         <DayTabs
@@ -224,35 +190,27 @@ export default function HomePage() {
           saturdayDate={saturdayDate}
         />
 
-        <div className="max-w-xl mx-auto px-4 sm:px-6">
-          {isLoadingParties ? (
-            <div className="flex justify-center py-12">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-temple-purple" />
-            </div>
-          ) : !headliner ? (
+        {isLoadingParties ? (
+          <PartyDeckSkeleton />
+        ) : deckParties.length === 0 ? (
+          <div className="max-w-xl mx-auto px-4 sm:px-6">
             <EmptyState selectedDay={selectedDay} />
-          ) : (
-            <>
-              <HeadlinerCard {...feedCardProps(headliner)} />
-              <SponsoredSlot />
-              {rest.length > 0 && (
-                <>
-                  <SectionLabel className="mb-3 mt-1">
-                    {getAlsoTonightLabel(selectedDay, rest.length)}
-                  </SectionLabel>
-                  {rest.map((party, index) => (
-                    <div
-                      key={party.id}
-                      style={{ animationDelay: `${Math.min(index, 8) * 40}ms` }}
-                    >
-                      <PartyCard {...feedCardProps(party)} />
-                    </div>
-                  ))}
-                </>
-              )}
-            </>
-          )}
-        </div>
+          </div>
+        ) : (
+          <PartyDeck
+            parties={deckParties}
+            day={selectedDay}
+            now={now}
+            isGoing={isGoing}
+            loggedOut={!authLoading && !isAuthenticated}
+            onGoingClick={handleGoingClick}
+            onNavigateClick={handleNavigateClick}
+            onViewAddress={handleViewAddress}
+            /* SPONSOR SLIDE — disabled by owner 2026-11-07, restore by uncommenting:
+            sponsor={PRIMARY_SPONSOR}
+            */
+          />
+        )}
       </div>
 
       <InviteModal
@@ -262,20 +220,7 @@ export default function HomePage() {
         party={lastGoingPartyId ? allParties.find((p) => p.id === lastGoingPartyId) ?? null : null}
       />
 
-      {ratingModalParty && (
-        <RatingModal
-          isOpen={!!ratingModalParty}
-          onClose={() => setRatingModalParty(null)}
-          partyTitle={ratingModalParty.title}
-          partyHost={ratingModalParty.host}
-          likePercentage={getLikePercentage(ratingModalParty.id, 0)}
-          ratingCount={getRatingCount(ratingModalParty.id, 0)}
-          userRating={getUserRating(ratingModalParty.id)}
-          onRate={handleModalRate}
-        />
-      )}
-
-      {currentPrompt && !ratingModalParty && (
+      {currentPrompt && (
         <RatingReminderModal
           isOpen={true}
           onClose={dismissPrompt}

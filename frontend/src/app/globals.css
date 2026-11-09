@@ -89,6 +89,17 @@
    */
   --temple-hyped: #FFD60A;
   --temple-hyped-ink: #0a0a0f;
+  /*
+   * Mobile dock (components/BottomNav). Its footprint is declared here, not
+   * measured: a 52px pill (44px targets + 4px ring padding) floating above
+   * the home indicator. Pages clear it with --dock-clearance; the map wrapper
+   * with --dock-footprint. The deck reads the dock's own height through
+   * [data-bottom-chrome] (useDeckFrame), which is built from these same vars.
+   */
+  --dock-pill: 3.25rem;
+  --dock-inset: max(0.75rem, calc(env(safe-area-inset-bottom) - 0.5rem));
+  --dock-footprint: calc(var(--dock-pill) + var(--dock-inset));
+  --dock-clearance: calc(var(--dock-footprint) + 1.5rem);
 }
 
 * {
@@ -587,15 +598,18 @@ html {
   pointer-events: none;
 }
 
-.host-tonight-prompt__cta:hover,
-.party-sheet__cta:hover,
-.invite-sheet__cta:hover {
-  border-color: rgba(224, 212, 255, 0.72);
-  background-image: linear-gradient(
-    180deg,
-    rgba(255, 255, 255, 0.28) 0%,
-    rgba(255, 255, 255, 0) 42%
-  );
+/* Same gate as Tailwind's hoverOnlyWhenSupported: no sticky hover after a tap. */
+@media (hover: hover) and (pointer: fine) {
+  .host-tonight-prompt__cta:hover,
+  .party-sheet__cta:hover,
+  .invite-sheet__cta:hover {
+    border-color: rgba(224, 212, 255, 0.72);
+    background-image: linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.28) 0%,
+      rgba(255, 255, 255, 0) 42%
+    );
+  }
 }
 
 .host-tonight-prompt__cta:active,
@@ -649,6 +663,174 @@ html {
   .party-sheet__tile {
     background-color: #252528;
     border-color: transparent;
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* Party deck — the home feed (components/feed/PartyDeck). What Tailwind  */
+/* can't say: the scroll-snap track, the info-panel scrim ramp, press     */
+/* feedback, pointer-gated prev/next and the one mount entrance.          */
+/* Colours are pure black/white alpha only.                               */
+/* ------------------------------------------------------------------ */
+
+/* Mount entrance: once, ≤200ms, strong ease-out. Day switches don't remount. */
+.party-deck__enter {
+  animation: party-deck-in 200ms cubic-bezier(0.23, 1, 0.32, 1) both;
+}
+
+@keyframes party-deck-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* The swipe: native scroll-snap, one card per flick. 16px inline padding +
+   8px gap leaves a sliver of the next card showing — the "more →" cue. */
+.party-deck__track {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding-inline: 16px;
+  scroll-padding-inline: 16px;
+  scroll-snap-type: x mandatory;
+  scroll-behavior: auto;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+.party-deck__track::-webkit-scrollbar,
+.party-deck__strip::-webkit-scrollbar {
+  display: none;
+}
+
+.party-deck__slide {
+  flex: 0 0 100%;
+  min-width: 0;
+  scroll-snap-align: start;
+  scroll-snap-stop: always;
+}
+
+/* Rank strip: scrolls sideways only when the night has more parties than fit. */
+.party-deck__strip {
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+  overscroll-behavior-x: contain;
+}
+
+/* Scrim behind the info panel: clear over the art, then a black floor the
+   text sits on. Extra stops ease the ramp so it doesn't band. */
+.party-deck__scrim {
+  background: linear-gradient(
+    to top,
+    rgba(0, 0, 0, 0.92) 0%,
+    rgba(0, 0, 0, 0.92) calc(100% - var(--party-deck-ramp, 28px)),
+    rgba(0, 0, 0, 0.7) calc(100% - var(--party-deck-ramp, 28px) * 0.6),
+    rgba(0, 0, 0, 0.3) calc(100% - var(--party-deck-ramp, 28px) * 0.25),
+    rgba(0, 0, 0, 0) 100%
+  );
+}
+
+/* Press feedback: transform only, 120ms, interruptible. */
+.party-deck__press {
+  transition: transform 120ms cubic-bezier(0.23, 1, 0.32, 1);
+  touch-action: manipulation;
+}
+
+.party-deck__press:active {
+  transform: scale(0.97);
+}
+
+/* Prev / next: for mouse + keyboard. Hidden and untappable on touch (the
+   swipe is the control there) but revealed on keyboard focus, so a keyboard
+   user on any device can page the deck. */
+.party-deck__nav {
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    opacity 150ms ease-out,
+    transform 120ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+.party-deck__nav:focus-visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .party-deck__nav {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .party-deck__nav:hover {
+    background-color: rgba(0, 0, 0, 0.8);
+  }
+}
+
+.party-deck__nav[aria-disabled='true'] {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.party-deck__nav[aria-disabled='true']:focus-visible {
+  opacity: 0.35;
+}
+
+.party-deck__nav:active {
+  transform: translateY(-50%) scale(0.97);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .party-deck__enter {
+    animation: none;
+  }
+
+  .party-deck__press,
+  .party-deck__nav {
+    transition: none;
+  }
+
+  .party-deck__press:active {
+    transform: none;
+  }
+
+  .party-deck__nav:active {
+    transform: translateY(-50%);
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* Dock — the mobile tab bar (components/BottomNav). Press feedback:      */
+/* transform only, 120ms strong ease-out, interruptible. Idle hover is    */
+/* the Tailwind hover: class (hoverOnlyWhenSupported).                    */
+/* ------------------------------------------------------------------ */
+.dock-press {
+  transition:
+    transform 120ms cubic-bezier(0.23, 1, 0.32, 1),
+    background-color 150ms ease-out;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.dock-press:active {
+  transform: scale(0.96);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dock-press {
+    transition: none;
+  }
+
+  .dock-press:active {
+    transform: none;
   }
 }
 
@@ -718,8 +900,10 @@ html {
   gap: 6px;
 }
 
-.popup-going-btn:hover {
-  opacity: 0.9;
+@media (hover: hover) and (pointer: fine) {
+  .popup-going-btn:hover {
+    opacity: 0.9;
+  }
 }
 
 .popup-going-btn:active {
@@ -741,8 +925,10 @@ html {
   justify-content: center;
 }
 
-.popup-navigate-btn:hover {
-  opacity: 0.9;
+@media (hover: hover) and (pointer: fine) {
+  .popup-navigate-btn:hover {
+    opacity: 0.9;
+  }
 }
 
 .popup-navigate-btn:active {
@@ -822,8 +1008,10 @@ html {
   border: none !important;
 }
 
-.leaflet-control-zoom a:hover {
-  background: #2a2a2a !important;
+@media (hover: hover) and (pointer: fine) {
+  .leaflet-control-zoom a:hover {
+    background: #2a2a2a !important;
+  }
 }
 
 .leaflet-control-zoom-in {

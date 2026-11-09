@@ -1,8 +1,10 @@
 'use client';
 
 /**
- * SponsoredSlot — the dashed "SPONSORED" strip between the headliner and
- * the ALSO TONIGHT list (WF-B2's ad slot).
+ * SponsoredSlot — the dashed "SPONSORED" strip (WF-B2's ad slot). The home
+ * feed now shows sponsors as their own deck slide (components/feed/
+ * SponsorSlide, reusing openSponsor below); this strip stays for list
+ * layouts.
  *
  * Driven entirely by lib/sponsors.ts: a sponsor in the SPONSORS array
  * renders here; an empty array renders nothing (no deal = no ad box).
@@ -27,8 +29,13 @@ export default function SponsoredSlot() {
   return <KitStrip sponsor={sponsor} />;
 }
 
-function openSponsor(sponsor: SponsorConfig) {
-  trackEvent('sponsor_slot_clicked', { sponsor: sponsor.id });
+/**
+ * Opens the sponsor's URL and fires `sponsor_slot_clicked`. Shared with the
+ * feed deck's SponsorSlide (components/feed) so every sponsor tap reports
+ * the same event; `extra` adds context (e.g. `{ demo: true }`).
+ */
+export function openSponsor(sponsor: SponsorConfig, extra?: Record<string, unknown>) {
+  trackEvent('sponsor_slot_clicked', { sponsor: sponsor.id, ...extra });
   if (sponsor.orderUrl) window.open(sponsor.orderUrl, '_blank', 'noopener,noreferrer');
 }
 

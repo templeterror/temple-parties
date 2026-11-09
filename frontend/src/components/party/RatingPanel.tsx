@@ -48,7 +48,7 @@ export default function RatingPanel({
   // Your own vote fills with the secondary (light purple) — same accent as
   // the navigate button — so "selected" reads instantly against the outline.
   const thumbClass = (active: boolean) =>
-    `w-[52px] h-10 flex items-center justify-center rounded-[10px] font-montserrat font-bold text-[18px] transition-all duration-150 ${
+    `w-[52px] h-11 flex items-center justify-center rounded-[10px] font-montserrat font-bold text-[18px] transition-all duration-150 ${
       active
         ? 'bg-temple-purple-light text-temple-purple'
         : 'border border-white/15 text-white'

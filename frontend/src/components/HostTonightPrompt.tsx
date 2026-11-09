@@ -5,9 +5,9 @@
  * a party. Copy is always about posting. Hosts (and admins) still go to
  * /create; everyone else goes to /become-host.
  *
- * While it's open AppShell hides the mobile tab bar, same as PartySheet
+ * While it's open AppShell hides the mobile Dock, same as PartySheet
  * on the map: the sheet sits on the bottom of the screen and takes that
- * chrome's place. Extra bottom padding clears the iOS Safari URL bar.
+ * chrome's place (`data-bottom-chrome`, so the deck sizes to it). Extra bottom padding clears the iOS Safari URL bar.
  *
  * Material is frost on a dedicated layer (fixed overlay, not a scrolling
  * surface — the DESIGN.md blur ban is for feed/map). Dismiss is a drawer
@@ -93,6 +93,7 @@ export function HostTonightPromptSheet({
         <div className="w-full max-w-md lg:max-w-[480px] animate-host-prompt-in">
           <aside
             role="dialog"
+            data-bottom-chrome="host-prompt"
             aria-labelledby="host-tonight-title"
             aria-describedby="host-tonight-body"
             className={`host-tonight-prompt pointer-events-auto relative w-full select-none ${

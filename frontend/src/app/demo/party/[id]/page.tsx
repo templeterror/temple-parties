@@ -19,7 +19,7 @@ import StickyActionBar from '@/components/ui/StickyActionBar';
 import NavigateIcon from '@/components/ui/NavigateIcon';
 import ShareIcon from '@/components/ui/ShareIcon';
 import DemoBanner from '@/components/DemoBanner';
-import { ratingWindowState } from '@/components/PartyCard';
+import { ratingWindowState } from '@/components/ui/VoteRow';
 import { useDemoSession } from '@/contexts/DemoSessionContext';
 import { useDemoMode } from '@/contexts/DemoModeContext';
 import useToast from '@/hooks/useToast';
@@ -263,7 +263,7 @@ export default function DemoPartyPage() {
           onClick={handleNavigate}
           aria-label="Navigate"
           title="Opens walking directions"
-          className="flex-[3] py-3 rounded-[10px] bg-temple-purple-light text-temple-purple flex items-center justify-center hover:opacity-90 active:scale-[0.98] transition-all duration-150"
+          className="flex-[3] min-h-11 py-3 rounded-[10px] bg-temple-purple-light text-temple-purple flex items-center justify-center hover:opacity-90 active:scale-[0.98] transition-all duration-150"
         >
           <NavigateIcon className="w-[18px] h-[18px]" />
         </button>

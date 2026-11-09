@@ -5,6 +5,7 @@
  *
  * A thin domain wrapper: it knows the weekend nights and hands the look
  * to SegmentedTabs so the day switcher matches other segmented controls.
+ * Mobile padding is tight (slim top, 2026-11-07); the segments stay 44px.
  */
 
 import SegmentedTabs from '@/components/ui/SegmentedTabs';
@@ -27,7 +28,7 @@ export default function DayTabs({
   saturdayDate,
 }: DayTabsProps) {
   return (
-    <div className="max-w-xl mx-auto px-4 pt-3 pb-3 lg:max-w-3xl lg:px-8">
+    <div className="max-w-xl mx-auto px-4 pt-1 pb-2 lg:max-w-3xl lg:px-8 lg:pt-3 lg:pb-3">
       <SegmentedTabs
         items={[
           { key: 'thursday', label: `THU ${thursdayDate}` },

@@ -145,8 +145,8 @@ function PartyZoneLock() {
 
     apply();
     map.on('resize', apply);
-    // The map wrapper grows/shrinks when the pin drawer hides the tab bar
-    // (pb-20 comes off). Window `resize` does not fire for that — observe
+    // The map wrapper grows/shrinks when the pin drawer hides the Dock
+    // (its Dock clearance comes off). Window `resize` does not fire for that — observe
     // the container and tell Leaflet its viewport changed.
     const ro = new ResizeObserver(() => {
       map.invalidateSize({ animate: false });

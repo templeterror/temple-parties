@@ -142,7 +142,7 @@ export default function RankingsView({ weekendOverride, initialFilter, snapshotP
     : 'THIS SEMESTER';
 
   return (
-    <div className="pb-24 lg:pb-8">
+    <div className="pb-[var(--dock-clearance)] lg:pb-8">
       <Header title="Rankings" />
 
       <RankingsDropdown

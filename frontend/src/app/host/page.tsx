@@ -76,7 +76,7 @@ export default function HostProfilePage() {
 
   return (
     <AppShell>
-      <div className="pb-24 lg:pb-8">
+      <div className="pb-[var(--dock-clearance)] lg:pb-8">
         <Header title="Host profile" />
 
         <div className="max-w-xl mx-auto px-4 sm:px-6 pt-3 flex flex-col gap-3.5 lg:pt-6">

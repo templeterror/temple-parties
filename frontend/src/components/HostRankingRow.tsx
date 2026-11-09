@@ -27,7 +27,7 @@ function HostRankingRow({ rank, host, isBelowThreshold }: HostRankingRowProps) {
         isBelowThreshold ? 'opacity-60' : ''
       }`}
     >
-      <span className={`w-8 shrink-0 font-montserrat font-bold text-[22px] leading-none ${rankColor(rank)}`}>
+      <span className={`w-8 shrink-0 font-montserrat font-bold text-[22px] leading-none tabular-nums ${rankColor(rank)}`}>
         {rank}
       </span>
 

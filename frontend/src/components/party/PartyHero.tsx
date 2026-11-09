@@ -29,7 +29,7 @@ export default function PartyHero({ posterImage, title, backHref = '/' }: PartyH
           type="button"
           onClick={() => router.push(backHref)}
           aria-label="Go back"
-          className="size-9 flex items-center justify-center rounded-full bg-black/60 text-white text-[18px] hover:bg-black/80 transition-colors"
+          className="size-11 flex items-center justify-center rounded-full bg-black/60 text-white text-[22px] hover:bg-black/80 transition-colors"
         >
           ←
         </button>
