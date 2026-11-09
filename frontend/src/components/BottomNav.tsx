@@ -6,10 +6,12 @@
  * 2026-11-07 "Nav chrome → Dock + slim Classic top".
  *
  * The Dock is a detached floating pill above the safe area — solid
- * temple-surface, hairline ring, no glass. Icons are the owner's Figma
- * exports in /public/icons (the `-active` file when active); only the active
- * tab shows its label. Tapping Home while on Home emits HomeReselect
- * (PartyDeck jumps back to #1) instead of re-navigating.
+ * temple-surface, hairline ring, no glass. Icons are the Solid set
+ * (2026-11-09 "Dock icons → Solid"): Figma `dock/*` components exported to
+ * /public/icons/dock-*.svg and drawn as CSS masks tinted by token, so colour
+ * never lives in the asset; only the active tab shows its label. Tapping
+ * Home while on Home emits HomeReselect (PartyDeck jumps back to #1)
+ * instead of re-navigating.
  *
  * Its footprint is the CSS vars --dock-pill / --dock-inset in globals.css,
  * and the nav carries `data-bottom-chrome` so useDeckFrame reserves exactly
@@ -40,40 +42,16 @@ type NavKey = 'home' | 'map' | 'rankings' | 'profile';
 const FOCUS_RING =
   'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white';
 
-/** No Figma asset exists for Profile — the original glyph (stroke = currentColor). */
-function ProfileIcon() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" className="size-[22px]" aria-hidden>
-      <circle cx="12" cy="8" r="3.25" stroke="currentColor" strokeWidth="1.8" />
-      <path d="M5.5 19c1.2-3 3.5-4.5 6.5-4.5s5.3 1.5 6.5 4.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-    </svg>
-  );
-}
-
 /**
- * Dock icon. Active: the `-active` Figma asset as-is (light-purple fill,
- * purple stroke). Idle: the idle asset strokes `#0B0B0B` at 50% — invisible
- * on black as an <img> — so it's drawn as a CSS mask over white: same
- * geometry, and the asset's own 50% stroke opacity lands it near
- * temple-muted.
+ * Nav icon: a Figma `dock-*` export used as a CSS mask, so the token on
+ * `background-color` is the glyph colour — idle temple-muted, active
+ * temple-purple-light (the brand purple reads dimmer than the idle grey on
+ * the dark pill). Shared by the Dock (22px) and the desktop bar (24px).
  */
-function DockGlyph({ item, active }: { item: (typeof MAIN_NAV)[number]; active: boolean }) {
-  if (!item.icon) {
-    return (
-      <span className={`flex shrink-0 ${active ? 'text-temple-purple' : 'text-temple-muted'}`}>
-        <ProfileIcon />
-      </span>
-    );
-  }
-  if (active) {
-    return (
-      // eslint-disable-next-line @next/next/no-img-element
-      <img src={item.iconActive} alt="" aria-hidden className="block size-[22px] shrink-0 object-contain" />
-    );
-  }
+function NavGlyph({ icon, active, className }: { icon: string; active: boolean; className: string }) {
   const mask: CSSProperties = {
-    WebkitMaskImage: `url(${item.icon})`,
-    maskImage: `url(${item.icon})`,
+    WebkitMaskImage: `url(${icon})`,
+    maskImage: `url(${icon})`,
     WebkitMaskSize: 'contain',
     maskSize: 'contain',
     WebkitMaskRepeat: 'no-repeat',
@@ -81,39 +59,40 @@ function DockGlyph({ item, active }: { item: (typeof MAIN_NAV)[number]; active: 
     WebkitMaskPosition: 'center',
     maskPosition: 'center',
   };
-  return <span aria-hidden className="block size-[22px] shrink-0 bg-white" style={mask} />;
+  return (
+    <span
+      aria-hidden
+      className={`block shrink-0 ${active ? 'bg-temple-purple-light' : 'bg-temple-muted'} ${className}`}
+      style={mask}
+    />
+  );
 }
 
-// Figma icon files: the Dock masks/uses them, the desktop bar shows them next
-// to its text labels. Profile has no asset (DockGlyph draws ProfileIcon).
-const MAIN_NAV: { key: NavKey; href: string; label: string; icon: string; iconActive: string }[] = [
+// Figma `dock/*` exports (Assets v2 → "Dock icons — Solid (2026-11-09)").
+const MAIN_NAV: { key: NavKey; href: string; label: string; icon: string }[] = [
   {
     key: 'home',
     href: '/',
     label: 'Home',
-    icon: '/icons/home.svg',
-    iconActive: '/icons/home-active.svg',
+    icon: '/icons/dock-home.svg',
   },
   {
     key: 'map',
     href: '/map',
     label: 'Map',
-    icon: '/icons/map.svg',
-    iconActive: '/icons/map-active.svg',
+    icon: '/icons/dock-map.svg',
   },
   {
     key: 'rankings',
     href: '/leaderboards',
     label: 'Ranks',
-    icon: '/icons/leaderboards.svg',
-    iconActive: '/icons/leaderboards-active.svg',
+    icon: '/icons/dock-ranks.svg',
   },
   {
     key: 'profile',
     href: '/profile',
     label: 'Profile',
-    icon: '',
-    iconActive: '',
+    icon: '/icons/dock-profile.svg',
   },
 ];
 
@@ -176,14 +155,7 @@ export default function BottomNav({ desktopOnly = false }: { desktopOnly?: boole
                   isActive ? 'text-temple-purple' : 'text-white/60 hover:text-white'
                 }`}
               >
-                {item.icon && (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={isActive ? item.iconActive : item.icon}
-                    alt=""
-                    className="w-6 h-6"
-                  />
-                )}
+                <NavGlyph icon={item.icon} active={isActive} className="size-6" />
                 {desktopLabel}
               </Link>
             );
@@ -235,7 +207,7 @@ function Dock({
                 isActive ? 'gap-2 bg-temple-surface-2 pl-3.5 pr-4' : 'w-12 hover:bg-white/[0.06]'
               } ${FOCUS_RING}`}
             >
-              <DockGlyph item={item} active={isActive} />
+              <NavGlyph icon={item.icon} active={isActive} className="size-[22px]" />
               {isActive && (
                 <span aria-hidden className="text-[13px] font-semibold leading-none text-temple-purple-light">
                   {item.label}
