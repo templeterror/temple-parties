@@ -25,7 +25,9 @@ jobs:
 
   backend:
     name: Backend (pytest)
-    runs-on: ubuntu-latest
+    # Pinned: setup-python has no 3.13.5 build for ubuntu-latest (26.04) yet,
+    # and CI should test the exact version runtime.txt deploys on Railway.
+    runs-on: ubuntu-24.04
     defaults:
       run:
         working-directory: backend
