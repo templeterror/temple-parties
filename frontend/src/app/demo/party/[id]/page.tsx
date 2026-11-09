@@ -273,6 +273,7 @@ export default function DemoPartyPage() {
         isOpen={showInviteModal}
         onClose={() => setShowInviteModal(false)}
         onShare={() => handleShare('invite_modal')}
+        party={party}
       />
 
       <Toast message={toast.message} isVisible={toast.isVisible} onClose={toast.hide} />

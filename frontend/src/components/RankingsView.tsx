@@ -20,19 +20,12 @@ import HostRankingRow from './HostRankingRow';
 import HostRankingInfoModal from './HostRankingInfoModal';
 import EmptyState from './EmptyState';
 import { PartyRanking, HostRanking } from '@/lib/types';
-import { getMonthRange, getSemesterRange, toISODate } from '@/utils/dateHelpers';
+import { getMonthRange, getSemesterRange, getLastCompletedWeekendFridayISO } from '@/utils/dateHelpers';
 import { partiesApi, ratingsApi } from '@/services/api';
 
 type PartyMode = { mode: 'parties'; params: { weekendOf?: string; weekendFrom?: string; weekendTo?: string } };
 type HostsMode = { mode: 'hosts' };
 type FetchSpec = PartyMode | HostsMode;
-
-/** Previous Friday relative to a Friday ISO date (server weekend key − 7 days). */
-function previousFridayISO(fridayISO: string): string {
-  const d = new Date(`${fridayISO}T12:00:00`);
-  d.setDate(d.getDate() - 7);
-  return toISODate(d);
-}
 
 interface RankingsViewProps {
   // When set, RankingsView pins the parties leaderboard to this single
@@ -67,8 +60,11 @@ export default function RankingsView({ weekendOverride, initialFilter, snapshotP
     return () => { cancelled = true; };
   }, [weekendOverride, isSnapshot]);
 
+  // "Last weekend" = the most recently COMPLETED weekend per the 6 AM
+  // rollover, which is not always the server key minus 7 days — the backend
+  // already rolls Sat/Sun/Mon back to the past Friday. See the helper.
   const lastWeekendOf = weekendOverride
-    ?? (currentWeekendOf ? previousFridayISO(currentWeekendOf) : null);
+    ?? (currentWeekendOf ? getLastCompletedWeekendFridayISO(currentWeekendOf) : null);
 
   const fetchSpec: FetchSpec | null = useMemo(() => {
     switch (selectedFilter) {

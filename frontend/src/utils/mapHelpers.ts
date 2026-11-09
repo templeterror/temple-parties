@@ -13,27 +13,18 @@ import { coverTileValue } from './coverPrice';
 /* ------------------------------------------------------------------ */
 
 /**
- * The area Temple parties happen in: W York St (north) down to Girard Ave
- * (south), N 5th St (east) out to N 19th St (west). The map never shows
- * anything outside it.
+ * Soft city lock for the map: a Philadelphia rectangle so campus parties,
+ * Fishtown, University City / Drexel, Center City, and Lincoln Financial
+ * are all reachable. Zoom-out floors at "the city fills the screen";
+ * panning rubber-bands at the edges (see PartyZoneLock in MapContent).
  *
- * Philly's street grid is tilted ~7° from true north, so a plain
- * lat/lng rectangle can't trace the four streets exactly. This is the
- * smallest box that contains all four corner intersections (pulled from
- * OpenStreetMap), each edge rounded OUTWARD to 4 decimals (~10 m) so the
- * intersections themselves are inside — everything between the streets
- * is reachable, and only small triangles just past them show at the corners.
- *
- *   19th & York   39.99040, -75.16352  ← sets the north edge
- *   5th  & York   39.98752, -75.14120  ← sets the east edge
- *   19th & Girard 39.97250, -75.16742  ← sets the west edge
- *   5th  & Girard 39.97015, -75.14504  ← sets the south edge
+ * Keep in sync with VALID_BOUNDS in backend/app/services/geocoding.py.
  */
 export const PARTY_ZONE = {
-  north: 39.9905,
-  south: 39.9701,
-  east: -75.1411,
-  west: -75.1675,
+  north: 40.1,
+  south: 39.875,
+  east: -75.05,
+  west: -75.28,
 } as const;
 
 /**
@@ -177,8 +168,8 @@ export function partyPhase(doorsOpenAt: Date, now: Date): PartyPhase {
 /**
  * Zoom ladder. The persistent "HOST · 11 PM" chip beside a ring pin only
  * appears once the map is zoomed in enough to have room for it; below that
- * it's pins only. (The design's z ≤ 14 "dots only" tier is unreachable now
- * that the party zone floors zoom-out around 15.)
+ * it's pins only. The Philly soft lock floors zoom-out around ~11–12, so
+ * the design's z ≤ 14 "dots only" tier is reachable when zoomed out.
  */
 export const HOST_CHIP_MIN_ZOOM = 16;
 

@@ -1,6 +1,6 @@
 """
 Geocoding service using OpenStreetMap Nominatim API.
-Converts street addresses and Temple campus landmarks to lat/lng.
+Converts street addresses and curated Philly/campus landmarks to lat/lng.
 """
 import httpx
 import logging
@@ -13,13 +13,14 @@ logger = logging.getLogger(__name__)
 NOMINATIM_URL = "https://nominatim.openstreetmap.org/search"
 USER_AGENT = "TemplePartiesApp/1.0 (https://tuparties.com; support@tuparties.com)"
 
-# Wider bounds for validating geocoding results — accepts nearby neighborhoods
-# (North Philly, Fairmount, etc.) but rejects totally wrong cities.
+# Philadelphia city box for validating geocoding results — covers Temple,
+# Fishtown, University City / Drexel, Center City, and Lincoln Financial,
+# while rejecting totally wrong cities.
 VALID_BOUNDS = {
-    "min_lat": 39.94,
-    "max_lat": 40.02,
-    "min_lng": -75.20,
-    "max_lng": -75.10,
+    "min_lat": 39.875,
+    "max_lat": 40.100,
+    "min_lng": -75.280,
+    "max_lng": -75.050,
 }
 
 # viewbox = left,top,right,bottom (Nominatim order)
@@ -28,8 +29,9 @@ _TEMPLE_VIEWBOX = (
     f"{VALID_BOUNDS['max_lng']},{VALID_BOUNDS['min_lat']}"
 )
 
-# Campus spots Nominatim often buries or labels as a nearby road only.
-# Matched first in suggest + geocode so "Bell Tower" / "Liacouras" just work.
+# Curated spots Nominatim often buries or labels as a nearby road only.
+# Matched first in suggest + geocode so "Bell Tower" / "the Linc" just work.
+# Optional `label` overrides the default campus suffix (Temple University).
 TEMPLE_LANDMARKS: list[dict] = [
     {
         "name": "Bell Tower",
@@ -102,6 +104,18 @@ TEMPLE_LANDMARKS: list[dict] = [
         "aliases": ("mcgonigle", "mcgonigle hall", "pearson hall", "pearson"),
         "lat": 39.980692,
         "lon": -75.158368,
+    },
+    {
+        "name": "Lincoln Financial Field",
+        "aliases": (
+            "lincoln financial",
+            "the linc",
+            "linc",
+            "lincoln financial field",
+        ),
+        "lat": 39.900833,
+        "lon": -75.1675,
+        "label": "Lincoln Financial Field, Philadelphia, PA",
     },
 ]
 
@@ -189,8 +203,12 @@ def _norm(text: str) -> str:
     return re.sub(r"\s+", " ", re.sub(r"[^a-z0-9\s]", " ", (text or "").lower())).strip()
 
 
-def _landmark_label(name: str) -> str:
-    return f"{name}, Temple University, Philadelphia, PA"
+def _landmark_label(spot: dict) -> str:
+    """Display label for a curated landmark (campus default, or spot['label'])."""
+    custom = (spot.get("label") or "").strip()
+    if custom:
+        return custom
+    return f"{spot['name']}, Temple University, Philadelphia, PA"
 
 
 def _place_name(address: dict | None, *, name: str | None = None) -> str:
@@ -300,7 +318,7 @@ def _in_valid_bounds(lat: float, lng: float) -> bool:
 
 def match_temple_landmarks(query: str, *, limit: int = 5) -> list[dict]:
     """
-    Return curated Temple campus spots whose name/aliases match the query.
+    Return curated Philly + Temple campus spots whose name/aliases match.
 
     Substring match either way so "bell" → Bell Tower and
     "Bell Tower Temple" still hits.
@@ -315,7 +333,7 @@ def match_temple_landmarks(query: str, *, limit: int = 5) -> list[dict]:
         if any(needle in h or h in needle for h in haystacks if h):
             hits.append(
                 {
-                    "display_name": _landmark_label(spot["name"]),
+                    "display_name": _landmark_label(spot),
                     "lat": round(float(spot["lat"]), 8),
                     "lon": round(float(spot["lon"]), 8),
                 }

@@ -515,14 +515,22 @@ html {
 }
 
 /*
- * Saturday host prompt — Apple-style frost. Lives on a dedicated layer
- * (not the scrolling feed) so the live-blur ban in DESIGN.md does not apply.
+ * Apple-style frost, shared by the Saturday host prompt, the map
+ * PartySheet, and the post-GOING InviteModal. All three are fixed overlays
+ * on a dedicated layer (not scrolling surfaces), so the live-blur ban in
+ * DESIGN.md does not apply. The values live here once — the sheets
+ * comma-join onto these rules rather than copying declarations, so the one
+ * frost recipe can never drift apart.
  */
-.host-tonight-prompt {
+.host-tonight-prompt,
+.party-sheet,
+.invite-sheet {
   isolation: isolate;
 }
 
-.host-tonight-prompt__glass {
+.host-tonight-prompt__glass,
+.party-sheet__glass,
+.invite-sheet__glass {
   position: absolute;
   inset: 0;
   border-radius: 24px 24px 0 0;
@@ -540,7 +548,9 @@ html {
 }
 
 @media (prefers-reduced-transparency: reduce) {
-  .host-tonight-prompt__glass {
+  .host-tonight-prompt__glass,
+  .party-sheet__glass,
+  .invite-sheet__glass {
     background: #252528;
     backdrop-filter: none;
     -webkit-backdrop-filter: none;
@@ -555,7 +565,9 @@ html {
  * specular edge + saturate blur, not a washed translucent mix (that
  * read grey on the sheet). No outer glow.
  */
-.host-tonight-prompt__cta {
+.host-tonight-prompt__cta,
+.party-sheet__cta,
+.invite-sheet__cta {
   position: relative;
   overflow: hidden;
   isolation: isolate;
@@ -574,7 +586,9 @@ html {
   transition: transform 150ms ease, border-color 150ms ease, background-image 150ms ease;
 }
 
-.host-tonight-prompt__cta::before {
+.host-tonight-prompt__cta::before,
+.party-sheet__cta::before,
+.invite-sheet__cta::before {
   content: '';
   position: absolute;
   inset: 0 auto auto 0;
@@ -586,7 +600,9 @@ html {
 
 /* Same gate as Tailwind's hoverOnlyWhenSupported: no sticky hover after a tap. */
 @media (hover: hover) and (pointer: fine) {
-  .host-tonight-prompt__cta:hover {
+  .host-tonight-prompt__cta:hover,
+  .party-sheet__cta:hover,
+  .invite-sheet__cta:hover {
     border-color: rgba(224, 212, 255, 0.72);
     background-image: linear-gradient(
       180deg,
@@ -596,20 +612,28 @@ html {
   }
 }
 
-.host-tonight-prompt__cta:active {
+.host-tonight-prompt__cta:active,
+.party-sheet__cta:active,
+.invite-sheet__cta:active {
   transform: scale(0.98);
 }
 
 @media (prefers-reduced-motion: reduce) {
   .host-tonight-prompt__cta,
-  .host-tonight-prompt__cta:active {
+  .host-tonight-prompt__cta:active,
+  .party-sheet__cta,
+  .party-sheet__cta:active,
+  .invite-sheet__cta,
+  .invite-sheet__cta:active {
     transition: none;
     transform: none;
   }
 }
 
 @media (prefers-reduced-transparency: reduce) {
-  .host-tonight-prompt__cta {
+  .host-tonight-prompt__cta,
+  .party-sheet__cta,
+  .invite-sheet__cta {
     background: var(--purple-primary);
     backdrop-filter: none;
     -webkit-backdrop-filter: none;
@@ -617,8 +641,28 @@ html {
     box-shadow: none;
   }
 
-  .host-tonight-prompt__cta::before {
+  .host-tonight-prompt__cta::before,
+  .party-sheet__cta::before,
+  .invite-sheet__cta::before {
     display: none;
+  }
+}
+
+/*
+ * Sheet stat tiles. StatTile ships bg-temple-surface; because these custom
+ * rules sit after @tailwind utilities, this single-class rule wins on the
+ * sheet without !important. Translucent light purple so the frost reads
+ * through the tile instead of punching a solid hole in it.
+ */
+.party-sheet__tile {
+  background-color: rgba(224, 212, 255, 0.08);
+  border: 1px solid rgba(224, 212, 255, 0.18);
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .party-sheet__tile {
+    background-color: #252528;
+    border-color: transparent;
   }
 }
 

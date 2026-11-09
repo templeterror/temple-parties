@@ -80,18 +80,26 @@ category + LIVE NOW tags, title, host line with "N parties hosted", STARTS /
 COVER / STARTS / SHARE row (the party page's stat row with the door time in
 the middle seat), address + read-only votes on one row, then GOING + navigate
 (the sticky-bar pair; the count lives on the GOING button). Drag down closes,
-drag up or tap the header pushes the party page.
-While it's open the map dims under the pins. The map rubber-bands to
-Philadelphia (`PHILLY` in `utils/mapHelpers.ts`); the default camera is
-still the campus party zone (York → Girard, 5th → 19th — `PARTY_ZONE`)
-and expands to fit all pins when any sit outside that box.
+drag up or tap the header pushes the party page. The sheet wears the host
+prompt's Apple-style frost — the `.party-sheet*` rules are comma-joined onto
+`.host-tonight-prompt*` in `globals.css`, so glass layer, light-purple
+grabber, frost-on-primary GOING, and translucent stat tiles are literally
+the same declarations; `prefers-reduced-transparency` falls back to solid
+`#252528`.
+While it's open the map dims under the pins and the map uses a soft
+Philadelphia city lock (`PARTY_ZONE` in `utils/mapHelpers.ts` — Temple,
+Fishtown, Drexel/UCity, Lincoln Financial, Center City).
 Also in the kit:
 `AddressAutocomplete` (shared by create-party + become-host), the
 rankings pieces `RankChampionCard` / `RankingRow` / `HostRankingRow`, and
 `HostTonightPrompt` (bottom drawer that replaces the mobile Dock,
 same as `PartySheet` on the map; hosts/admins once per day Wed–Sat,
 everyone else once on Friday; swipe down or Escape to dismiss — no ✕;
-hosts go to `/create`, everyone else to `/become-host`).
+hosts go to `/create`, everyone else to `/become-host`), and
+`InviteModal` (the post-GOING share drawer — same frost as the host
+prompt, a poster thumb + title/host/day @ door time line for the party
+just RSVP'd to, a frost-on-primary "Share with friends" CTA, and
+swipe-down / Escape / backdrop dismiss).
 
 ## Nav chrome (mobile)
 
@@ -178,8 +186,9 @@ server-side, surfaced as toast, never preached in copy) → sticky bar.
    reserved for the compact GOING pill and avatars.
 5. **Map pins and the sheet mirror cards.** Pin CSS in `globals.css`
    consumes the same `--temple-*` vars (the headliner ★ is the HEADLINER
-   badge, pin-sized); the party sheet is plain kit components. Only the
-   sponsor pin still uses a Leaflet popup.
+   badge, pin-sized); the party sheet is plain kit components on the host
+   prompt's shared frost material (a fixed overlay, so rule 3 does not
+   apply). Only the sponsor pin still uses a Leaflet popup.
 6. **Forms mirror server validation, in friendlier words.** The server 422 is
    the backstop, never the UX: rules a host can hit get checked client-side
    with a human sentence under the field (ticket link https rule in
@@ -215,6 +224,7 @@ server-side, surfaced as toast, never preached in copy) → sticky bar.
 | 2026-08-22 | Host-line marks redrawn (owner: old pair "sucks"): VerifiedMark is one inline SVG seal (12 scallops, secondary fill, black check, 15px) replacing two pixel-nudged `<img>`s; last-semester `#1` is a bare 16px gold crown glyph after the seal (a filled gold chip was tried and rejected by the owner as too button-like); cards/HostRow/map popup all use 4px gaps, marks carry no margin |
 | 2026-08-21 | Party-page SHARE is the loudest secondary (TUP-9): a SHARE tile in the COVER / GOING row (iOS tray icon). Native share falls back to execCommand copy so Mobile Safari / Instagram WebView actually get the URL. |
 | 2026-08-27 | Map locked to the party zone (owner): W York St → Girard Ave, 5th → 19th, as the smallest lat/lng box holding the four corner intersections; rubber-band edges; zoom-out floored at "zone fills the screen" per viewport (≈15.2 phone / ≈16 desktop); start view unchanged |
+| 2026-09-10 | Map + geocode soft city lock (owner): `PARTY_ZONE` / `VALID_BOUNDS` expanded to a Philadelphia box so Lincoln Financial, Fishtown, and Drexel are creatable and visible; rubber-band + "city fills the screen" zoom floor kept; Lincoln Financial Field added as a curated landmark |
 | 2026-08-27 | Cover tiles show data, not prose (owner: "$10 at the door" on a tile is wrong): `utils/coverPrice.ts` reads the amount out of the host's free text → tiles are only `FREE` / `$N` / `—` (party page keeps `ONLINE` for ticketed-with-no-price). Admin queue still shows the raw text |
 | 2026-08-27 | Map pins + sheet from Figma §13 (owner): ring pin for **verified hosts only** (`isVerified` stands in for the paid tier — no backend gate yet), free hosts keep the disc; default brand = app palette via CSS vars until the picker ships. Leaflet popup → `PartySheet` bottom drawer. Sheet stats are STARTS / ENDS / COVER (WALK dropped — no location permission). House footprint glow and pin clustering deferred (no parcel data; zoom lock makes clusters rare) |
 | 2026-08-27 | Map pin going-count is always a hanging pill badge (owner: phone couldn't read the in-circle number): same `pin-count-badge` on disc + ring, 11px above iOS text-size floor, Leaflet cell overflow visible |
@@ -222,11 +232,11 @@ server-side, surfaced as toast, never preached in copy) → sticky bar.
 | 2026-09-10 | Host prompt cadence (owner): hosts/admins see it once per rolled day Wed–Sat; regulars once on Friday (Fri 6 AM–Sat 5:59 AM). Consume-on-reveal, keyed by user id so two accounts on one phone do not share the counter. Same sheet, swipe, looking-count, and CTA routing. |
 | 2026-09-10 | Host prompt sheet sits on the bottom of the screen and replaces the mobile tab bar while open (same pattern as map `PartySheet`). Desktop top bar stays. |
 | 2026-09-10 | Host prompt CTA is frost on primary (`#b24bf3` fill, specular edge, no glow) — no TONIGHT eyebrow. `prefers-reduced-transparency` stays solid `temple-purple`. |
-| 2026-09-10 | Map rubber-bands to Philadelphia (owner): create/geocode accepts any Philly street or venue (the Linc, Center City clubs); `maxBounds` is the city box; default camera stays campus (`PARTY_ZONE`) and `fitBounds`s the night's pins when any sit outside it |
-| 2026-09-17 | `/advertise` is a URL-only light-mode leave-behind (white page, ink text, purple accent, no hyped glow, no app chrome). The rest of the product stays black. `Wordmark` takes `onLight` so `tu` stays purple on white. |
+| 2026-09-13 | Map `PartySheet` takes the host prompt's frost material (owner, TUP-22): same glass layer, light-purple grabber, and frost-on-primary GOING, plus translucent light-purple stat tiles. The `.party-sheet*` selectors comma-join onto the existing `.host-tonight-prompt*` rules — one set of declarations, no copies. Information structure, copy, buttons, callbacks, drag thresholds, and accessibility are unchanged; `prefers-reduced-transparency` falls back to solid `#252528`. |
+| 2026-09-15 | `InviteModal` (post-GOING) rebuilt as a bottom drawer in the shared frost (TUP-13): drops `ModalWrapper`, the party emoji, and the raw-hex share button. Shows the party it was opened for — poster thumb, title, host, day @ door time, and a going count only when the server gave one (null stays null, never a fake 0). CTA is frost on primary with `ShareIcon` + "Share with friends"; "Maybe later", the backdrop, Escape, and a >90px downward swipe all dismiss. The `.invite-sheet*` selectors comma-join onto the existing `.host-tonight-prompt*` rules — still one set of declarations. `isOpen`/`onClose`/`onShare` contract and each caller's share toast are unchanged. |
 | 2026-11-07 | Compact card unslop pass (owner): category chip demoted to a muted label and chevron removed so GOING is the only purple block; title clamps to 2 lines (was 1-line truncate); votes hidden before the rating window opens when no one has voted. Supersedes the "category chip + chevron" part of 2026-08-17. Headliner card unchanged. |
 | 2026-11-07 | **Feed cards → Deck** (owner, from `/proto/cards`, 5 variants; audit in `feed-card-audit.md`). Home is one party per screen, swiped horizontally (native scroll-snap) in going-count order, high → low (your own RSVP counts; ties keep server order; logged out keeps the server order). Above it a rank strip of flyer thumbnails 1…N (tap to jump; current ringed; #1 chip yellow). Each card: the whole flyer (`object-contain`, never cropped) on static blurred wings of itself, then a fixed info panel — `#1 tonight` chip (hyped yellow, top party on tonight only — not on past nights) or `#N of M`, title (2 lines, balanced), host line (seal, crown, `92% liked`), facts (`Live now` / `Doors 10 PM` / `Ended` · price · `6 min walk`), `N going` (tabular; `—` logged out), and controls: `I'm going` / `Going ✓` (the one primary), 44px directions, `Details`. Past nights: `Ended`, `N went`, votes, Details only. Sponsor is its own slide right after #1 (owner). Prev/next buttons only for fine pointers; ←/→ not hijacked. **Rejected:** *Current* (ten filled buttons per screen, cropped flyers, invisible ranking); *Flyer* (≈1 party per screen with no rank overview, tall flyers letterboxed); *Ranked* (flyer demoted to a 56px thumb, vibe second); *Tonight* (most structure, ~199px text column clamps titles, weak on nights that haven't started). Supersedes the 2026-08-17 card anatomy and the 2026-11-07 compact-card unslop row. |
 | 2026-11-07 | **Nav chrome → Dock + slim Classic top** (owner, from `/proto/nav`, 7 variants). Bottom: the mobile tab bar becomes a detached floating pill dock above the safe area — solid `temple-surface`, hairline ring, no glass — with the four Figma icons from `public/icons` (idle drawn as a white mask so it reads on black), label shown only on the active tab; tapping Home while on Home jumps the deck back to #1. Top: today's wordmark row + full-width THU/FRI/SAT tabs, kept but slimmer (owner) — less header padding and tighter spacing, tabs still ≥ 44px. Host prompt / map PartySheet still replace the bottom bar while open; party pages still hide it. **Rejected:** *Current* (≈214px of chrome; 203px flyer on a 667 phone); *Dock* with its one-row wordmark + small day pill top (owner: dock yes, that top no); *Thumb* (no brand on Home, five controls in one row); *Top* (nav out of thumb reach on Home, inconsistent across routes); *+Days* and *+Strip* (no brand on Home; +Strip crowds days into the thumb strip). |
-| 2026-11-07 | **Feed sponsor slide off** (owner: "we don't need it"). The SponsorSlide and its `Ad` marker are commented out (not deleted) at the `sponsor` prop in `app/page.tsx` and `app/demo/page.tsx`; restore by uncommenting. Map sponsor pin, SponsorReminderModal and `/advertise` are unchanged. Supersedes the sponsor-as-slide part of the Deck row. |
+| 2026-11-07 | **Feed sponsor slide off** (owner: "we don't need it"). The SponsorSlide and its `Ad` marker are commented out (not deleted) at the `sponsor` prop in `app/page.tsx` and `app/demo/page.tsx`; restore by uncommenting. Map sponsor pin and SponsorReminderModal are unchanged. Supersedes the sponsor-as-slide part of the Deck row. |
 | 2026-11-08 | Deck cards label the party by **category chip** instead of `#N of M` (owner). Rank lives in the rank strip; the top party keeps `#1 tonight` in front of its category chip. Category chip: party-page tag metrics (4px corners, 11px bold uppercase), `temple-purple`, muted on past nights. |
 | 2026-11-08 | **Deck card labels → Quiet** (owner, from `/proto/chips`, 4 variants). No containers: the category is a muted 12px semibold caps eyebrow (tracking 0.08em, `temple-muted`; `white/50` on past nights), and the top party gets yellow `#1 tonight` text (bold, `temple-hyped` as a text colour only — no box, no glow; `white/60` on past nights) joined by a middle dot. Category `Other` shows no label. Weakest label contrast 5.3:1. **Rejected:** *Current* purple chips (white on `#b24bf3` = 4.04:1, fails 4.5:1; three loud blocks with the I'm going button); *Outline* ghost pills (read as tappable next to the outlined directions/Details buttons; breaks the 4px chip rule); *On-flyer* corner tags (+30px flyer, but cover the host's own header text on most posters). Supersedes the 2026-11-08 category-chip row. |

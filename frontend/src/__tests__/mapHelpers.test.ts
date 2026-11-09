@@ -57,18 +57,23 @@ describe('party zone', () => {
     ]);
   });
 
-  it('contains all four corner intersections and campus center', () => {
+  it('contains campus corners, Temple center, and Philly party spots', () => {
     expect(isInsidePartyZone(39.9904034, -75.1635189)).toBe(true); // 19th & York
     expect(isInsidePartyZone(39.987515, -75.1412)).toBe(true); // 5th & York
     expect(isInsidePartyZone(39.9725032, -75.1674231)).toBe(true); // 19th & Girard
-    expect(isInsidePartyZone(39.9701465, -75.1450397)).toBe(true); // 5th & Girard (southernmost node)
+    expect(isInsidePartyZone(39.9701465, -75.1450397)).toBe(true); // 5th & Girard
     expect(isInsidePartyZone(39.9812, -75.155)).toBe(true); // TEMPLE_CENTER
+    expect(isInsidePartyZone(39.9526, -75.1652)).toBe(true); // City Hall
+    expect(isInsidePartyZone(39.900833, -75.1675)).toBe(true); // Lincoln Financial
+    expect(isInsidePartyZone(39.9705, -75.134)).toBe(true); // Fishtown-ish
+    expect(isInsidePartyZone(39.9566, -75.1899)).toBe(true); // Drexel / UCity
   });
 
-  it('rejects places outside the zone', () => {
-    expect(isInsidePartyZone(39.9526, -75.1652)).toBe(false); // City Hall (south)
-    expect(isInsidePartyZone(39.9812, -75.1300)).toBe(false); // east of 5th
-    expect(isInsidePartyZone(40.0000, -75.1550)).toBe(false); // north of York
+  it('rejects places outside Philadelphia', () => {
+    expect(isInsidePartyZone(40.7128, -74.006)).toBe(false); // NYC
+    expect(isInsidePartyZone(39.9812, -74.9)).toBe(false); // east of the city box
+    expect(isInsidePartyZone(40.2, -75.155)).toBe(false); // north of Philly
+    expect(isInsidePartyZone(39.85, -75.1675)).toBe(false); // south of the stadium box
   });
 });
 
