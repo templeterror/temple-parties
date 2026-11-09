@@ -6,11 +6,11 @@
  * party's popularity readout.
  *
  * Two shapes for the two places it lives:
- *  - bar:  full-width block ("GOING (67)") — headliner card + party-page
- *          sticky bar. Grows to fill its row (flex-1).
+ *  - bar:  full-width block ("GOING (67)") — the map PartySheet. Grows to
+ *          fill its row (flex-1).
  *  - pill: compact chip ("GOING · 23" → "✓ IN · 52") — the tail cards.
  *
- * Two tones for the ticketed party page (WF-D2), where BUY TICKETS is the
+ * Two tones (from the WF-D2 ticketed party page), for rows where BUY TICKETS is the
  * primary action and GOING steps back to an outline:
  *  - primary:   solid purple (going state shows the softer gradient).
  *  - secondary: hairline outline, stays quiet next to a filled neighbor.

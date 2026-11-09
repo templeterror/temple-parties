@@ -203,7 +203,7 @@ function tileFontSize(title: string, compact: boolean): number {
 const EYEBROW = 'text-[12px] uppercase leading-4 tracking-[0.08em]';
 
 /**
- * Card labels — "Quiet" (owner, 2026-11-08, from /proto/chips): no fills or
+ * Card labels — "Quiet" (owner, 2026-11-08, the chips exploration): no fills or
  * boxes. The category is a muted caps eyebrow; the top party gets yellow
  * "#1 tonight" text (a text colour only — no box, no glow) joined by a middle
  * dot. "Other" shows no label. Past nights mute both.

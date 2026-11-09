@@ -1,5 +1,5 @@
 import { isLastSemesterChampion } from '@/lib/lastSemesterChampions';
-import { parseRankingsFilter } from '@/components/RankingsDropdown';
+import { parseRankingsFilter } from '@/utils/ranks';
 
 describe('isLastSemesterChampion', () => {
   it('matches Latin Heat case-insensitively', () => {

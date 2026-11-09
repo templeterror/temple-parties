@@ -3,7 +3,7 @@
 /**
  * LastSemesterChampBadge — the gold crown for hosts who won last semester.
  *
- * Sits on the host line (feed cards + party-page HostRow), right after the
+ * Sits on the host line (feed cards + the party page), right after the
  * VerifiedMark, never in the category/HEADLINER tag row. It's a bare glyph,
  * no box, no fill behind it — the same "owner crown next to the name" idiom
  * Discord uses, which survives at tiny sizes. Gold (`temple-hyped`) is what
@@ -16,10 +16,11 @@
  * neither. No margin of its own — the host row owns the spacing (`gap-1`).
  *
  * Two modes:
- *  - `interactive` (party-page HostRow): a real <button>; tap opens the
- *    explainer modal, which names the host (`hostName`). The ::after pseudo
- *    pads the hit area by 6px on every side without changing what you see,
- *    because the glyph itself is tiny.
+ *  - `interactive` (the party page's host line): a real <button>; tap opens
+ *    the explainer modal, which names the host (`hostName`). The ::after
+ *    pseudo pads the hit area 14px on every side — 16px glyph → 44×44px
+ *    target — without changing what you see. The seal beside it stays
+ *    static there, so the two padded targets never overlap.
  *  - static (feed cards, the default): a plain <span> with a title tooltip.
  *    Cards are ONE tap target (the stretched Link) — a clickable crown there
  *    would steal taps from the card, so the feed just shows the mark.
@@ -65,7 +66,7 @@ export default function LastSemesterChampBadge({ interactive = false, hostName }
         onClick={handleClick}
         title={LABEL}
         aria-label={LABEL}
-        className={`relative ${MARK_CLASSES} transition hover:opacity-85 active:scale-95 after:absolute after:-inset-1.5 after:content-['']`}
+        className={`relative ${MARK_CLASSES} transition hover:opacity-85 active:scale-95 after:absolute after:-inset-[14px] after:content-['']`}
       >
         <CrownIcon />
       </button>

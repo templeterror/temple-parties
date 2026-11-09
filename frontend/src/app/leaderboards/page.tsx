@@ -5,7 +5,7 @@ import RankingsView from '@/components/RankingsView';
 import AppShell from '@/components/AppShell';
 import PageSkeleton from '@/components/PageSkeleton';
 import RequireOnboarding from '@/components/RequireOnboarding';
-import { parseRankingsFilter, type RankingsFilter } from '@/components/RankingsDropdown';
+import { parseRankingsFilter, type RankingsFilter } from '@/utils/ranks';
 
 export default function LeaderboardsPage() {
   const [isHydrated, setIsHydrated] = useState(false);

@@ -1,27 +1,55 @@
 'use client';
 
 /**
- * RankingsView — the Ranks tab: parties ranked by like percentage, or hosts
- * ranked by the Wilson-score leaderboard.
+ * RankingsView — the Ranks tab (/leaderboards, /demo/leaderboards): parties
+ * ranked by like percentage for a period, or hosts ranked by the Wilson /
+ * Bayesian leaderboard. Spec: DESIGN.md decision log, 2026-11-09
+ * "Ranks → Podium"; pieces in components/ranks/, rules in utils/ranks.ts.
  *
- * One dropdown drives everything (Last Weekend / This Month / This Semester
- * / By Hosts — owner's call: a single familiar control beats stacked tabs).
- * The rows are cards in the v2 feed language; party cards link straight to
- * their party page, and rank numbers medal: #1 gold, #2 light purple,
- * #3 purple, the rest quiet.
+ * Layout: one header row — the page title "Ranks" (the Dock's name for
+ * this place; it replaces the old mobile `<Header title="Rankings" />`, so
+ * there is exactly one title), the `How host ranking works` info button in
+ * by-hosts, and the ONE period menu. Then the top three on a podium, #4+
+ * as bare hairline rows, and anything under the floor in its own labelled
+ * group. Loading = the podium/list skeleton; empty = the ghost podium + a
+ * way out.
+ *
+ * Data (unchanged from the card version):
+ *  - live: `ratingsApi.getRankings` per period / `getHostRankings`;
+ *    "last weekend" waits for GET /parties' weekend key and resolves the
+ *    most recently COMPLETED weekend (getLastCompletedWeekendFridayISO).
+ *  - `weekendOverride` pins last-weekend to one Friday.
+ *  - `snapshotParties` / `snapshotHosts` (the /demo sandbox) skip the APIs
+ *    entirely; every party period shows the same frozen list.
+ *
+ * Analytics: `ranks_period_changed { period, source }` when the period
+ * changes from the menu or an empty state's button.
  */
 
-import { useState, useEffect, useMemo } from 'react';
-import Header from './Header';
-import RankingsDropdown, { RankingsFilter } from './RankingsDropdown';
-import RankChampionCard from './RankChampionCard';
-import RankingRow from './RankingRow';
-import HostRankingRow from './HostRankingRow';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import HostRankingInfoModal from './HostRankingInfoModal';
-import EmptyState from './EmptyState';
+import RanksPodium, { RanksPodiumHostStep, RanksPodiumPartyStep } from './ranks/RanksPodium';
+import { RanksHostRow, RanksPartyRow } from './ranks/RanksRow';
+import { RanksList, RanksListItem, RanksUnrankedGroup } from './ranks/RanksList';
+import { RanksEmpty, RanksNothingRanked } from './ranks/RanksEmpty';
+import RanksPeriodMenu from './ranks/RanksPeriodMenu';
+import RanksSkeleton from './ranks/RanksSkeleton';
+import { DECK_FOCUS_RING } from './feed/RankStrip';
 import { PartyRanking, HostRanking } from '@/lib/types';
 import { getMonthRange, getSemesterRange, getLastCompletedWeekendFridayISO } from '@/utils/dateHelpers';
 import { partiesApi, ratingsApi } from '@/services/api';
+import { trackEvent } from '@/utils/analytics';
+import {
+  HOST_MIN_PARTIES,
+  HOST_MIN_VOTES,
+  PERIOD_LABELS,
+  RANK_THRESHOLD,
+  emptyStateNextFilter,
+  podiumOrder,
+  splitHostRankings,
+  splitPartyRankings,
+  type RankingsFilter,
+} from '@/utils/ranks';
 
 type PartyMode = { mode: 'parties'; params: { weekendOf?: string; weekendFrom?: string; weekendTo?: string } };
 type HostsMode = { mode: 'hosts' };
@@ -46,8 +74,8 @@ export default function RankingsView({ weekendOverride, initialFilter, snapshotP
   const [fetchedPartyRankings, setFetchedPartyRankings] = useState<PartyRanking[]>([]);
   const [fetchedHostRankings, setFetchedHostRankings] = useState<HostRanking[]>([]);
   const [isLoading, setIsLoading] = useState(!isSnapshot);
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [infoOpen, setInfoOpen] = useState(false);
+  const infoButtonRef = useRef<HTMLButtonElement>(null);
   // Authoritative current weekend from GET /parties (fixes §8.11 mislabel).
   const [currentWeekendOf, setCurrentWeekendOf] = useState<string | null>(null);
 
@@ -112,87 +140,207 @@ export default function RankingsView({ weekendOverride, initialFilter, snapshotP
 
   const partyRankings = snapshotParties ?? fetchedPartyRankings;
   const hostRankings = snapshotHosts ?? fetchedHostRankings;
+  const parties = useMemo(() => splitPartyRankings(partyRankings), [partyRankings]);
+  const hosts = useMemo(() => splitHostRankings(hostRankings), [hostRankings]);
 
-  // Push parties below rating threshold to the end
-  const sortedPartyRankings = useMemo(() => {
-    const rated = partyRankings.filter(p => p.ratingCount >= 5);
-    const unrated = partyRankings.filter(p => p.ratingCount < 5);
-    return [...rated, ...unrated];
-  }, [partyRankings]);
+  const showHosts = selectedFilter === 'by-hosts';
 
-  // Push ineligible hosts (<2 parties or <15 ratings) to the end, dimmed.
-  const sortedHostRankings = useMemo(() => {
-    const eligible = hostRankings.filter(h => h.isEligible);
-    const ineligible = hostRankings.filter(h => !h.isEligible);
-    return [...eligible, ...ineligible];
-  }, [hostRankings]);
+  const changePeriod = (period: RankingsFilter, source: 'menu' | 'empty_state') => {
+    setSelectedFilter(period);
+    trackEvent('ranks_period_changed', { period, source });
+  };
 
-  const showHosts = fetchSpec?.mode === 'hosts';
-  const hasRows = showHosts ? sortedHostRankings.length > 0 : sortedPartyRankings.length > 0;
+  // ModalWrapper doesn't move focus in or back out; do both from here
+  // (emil-touch-and-accessibility #7).
+  useEffect(() => {
+    if (!infoOpen) return;
+    const raf = requestAnimationFrame(() => {
+      document.querySelector<HTMLElement>('[data-testid="modal-backdrop"] button')?.focus();
+    });
+    return () => cancelAnimationFrame(raf);
+  }, [infoOpen]);
 
-  // The #1 party gets the hero treatment — but only a REAL #1 (meets the
-  // rating threshold). An unrated period just renders the plain list.
-  const champion = !showHosts && sortedPartyRankings[0]?.ratingCount >= 5
-    ? sortedPartyRankings[0]
-    : null;
-  const restOfParties = champion ? sortedPartyRankings.slice(1) : sortedPartyRankings;
-  const championPeriodLabel =
-    selectedFilter === 'last-week' ? 'LAST WEEKEND'
-    : selectedFilter === 'this-month' ? 'THIS MONTH'
-    : 'THIS SEMESTER';
+  const closeInfo = () => {
+    setInfoOpen(false);
+    infoButtonRef.current?.focus();
+  };
 
   return (
-    <div className="pb-[var(--dock-clearance)] lg:pb-8">
-      <Header title="Rankings" />
+    <div className="ranks mx-auto w-full max-w-[600px] px-4 pb-[var(--dock-clearance)] font-montserrat text-white lg:px-6 lg:pb-8">
+      {/* The page's only title. Mobile clears the notch like the slim
+          Header (safe area, 12px floor); desktop sits under the fixed bar. */}
+      <header className="flex items-center gap-1 pb-3 pt-[max(env(safe-area-inset-top),12px)] lg:pt-10">
+        <h1 className="flex-1 text-[26px] font-bold leading-8 tracking-[-0.01em]">Ranks</h1>
+        {showHosts && (
+          <button
+            ref={infoButtonRef}
+            type="button"
+            aria-label="How host ranking works"
+            onClick={() => setInfoOpen(true)}
+            className={`ranks__press flex size-11 shrink-0 items-center justify-center rounded-full text-temple-muted hover:text-white ${DECK_FOCUS_RING}`}
+          >
+            <InfoIcon />
+          </button>
+        )}
+        <RanksPeriodMenu value={selectedFilter} onValueChange={(p) => changePeriod(p, 'menu')} />
+      </header>
 
-      <RankingsDropdown
-        selectedFilter={selectedFilter}
-        onFilterChange={setSelectedFilter}
-        onOpenChange={setIsDropdownOpen}
-        onInfoClick={selectedFilter === 'by-hosts' ? () => setInfoOpen(true) : undefined}
-      />
-
-      <div className={`max-w-xl mx-auto px-4 sm:px-6 transition-opacity duration-200 ${isDropdownOpen ? 'opacity-70' : 'opacity-100'}`}>
+      <div aria-busy={isLoading || undefined}>
         {isLoading ? (
-          <div className="flex justify-center py-12">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-temple-purple"></div>
-          </div>
-        ) : !hasRows ? (
-          <EmptyState
-            message={showHosts ? 'No ranked hosts yet' : 'No ranked parties for this period'}
-            leaderboardsHref={null}
-          />
+          <RanksSkeleton />
+        ) : showHosts ? (
+          <HostsRanks ranked={hosts.ranked} unranked={hosts.unranked} onPeriodChange={(p) => changePeriod(p, 'empty_state')} />
         ) : (
-          <div className="animate-slide-up-fade">
-            {showHosts ? (
-              sortedHostRankings.map((host, index) => (
-                <HostRankingRow
-                  key={host.hostCode}
-                  rank={index + 1}
-                  host={host}
-                  isBelowThreshold={!host.isEligible}
-                />
-              ))
-            ) : (
-              <>
-                {champion && (
-                  <RankChampionCard party={champion} periodLabel={championPeriodLabel} />
-                )}
-                {restOfParties.map((party, index) => (
-                  <RankingRow
-                    key={party.id}
-                    rank={index + (champion ? 2 : 1)}
-                    party={party}
-                    isBelowThreshold={party.ratingCount < 5}
-                  />
-                ))}
-              </>
-            )}
-          </div>
+          <PartiesRanks
+            ranked={parties.ranked}
+            unranked={parties.unranked}
+            period={selectedFilter}
+            onPeriodChange={(p) => changePeriod(p, 'empty_state')}
+          />
         )}
       </div>
 
-      <HostRankingInfoModal isOpen={infoOpen} onClose={() => setInfoOpen(false)} />
+      <HostRankingInfoModal isOpen={infoOpen} onClose={closeInfo} />
     </div>
+  );
+}
+
+// ─── Parties ─────────────────────────────────────────────────────────────────
+
+function PartiesRanks({
+  ranked,
+  unranked,
+  period,
+  onPeriodChange,
+}: {
+  ranked: PartyRanking[];
+  unranked: PartyRanking[];
+  period: RankingsFilter;
+  onPeriodChange: (p: RankingsFilter) => void;
+}) {
+  const label = PERIOD_LABELS[period].sentence;
+
+  if (ranked.length === 0 && unranked.length === 0) {
+    const next = emptyStateNextFilter(period);
+    return (
+      <RanksEmpty
+        title={`No votes yet for ${label}.`}
+        description="Voting opens when doors do."
+        actionLabel={next === 'by-hosts' ? 'See host ranks' : `See ${PERIOD_LABELS[next].sentence}`}
+        onAction={() => onPeriodChange(next)}
+      />
+    );
+  }
+
+  const top = ranked.slice(0, 3);
+  const rest = ranked.slice(3);
+  const eyebrow = `#1 ${label}`;
+
+  return (
+    <>
+      {top.length > 0 ? (
+        // Keyed by period so the steps rise again on every switch.
+        <RanksPodium key={period} count={top.length} aria-label={`Top ${top.length}, ${label}`} className="mt-4">
+          {podiumOrder(top).map((party) => (
+            <RanksPodiumPartyStep key={party.id} party={party} rank={top.indexOf(party) + 1} eyebrow={eyebrow} />
+          ))}
+        </RanksPodium>
+      ) : (
+        <RanksNothingRanked>{`Nothing has ${RANK_THRESHOLD} votes yet for ${label}.`}</RanksNothingRanked>
+      )}
+
+      {rest.length > 0 && (
+        <RanksList aria-label={`Ranks 4 to ${ranked.length}`}>
+          {rest.map((party, i) => (
+            <RanksListItem key={party.id}>
+              <RanksPartyRow party={party} rank={i + 4} />
+            </RanksListItem>
+          ))}
+        </RanksList>
+      )}
+
+      {unranked.length > 0 && (
+        <RanksUnrankedGroup title="Not enough votes yet" note={`Needs ${RANK_THRESHOLD} votes to rank.`}>
+          {unranked.map((party) => (
+            <RanksListItem key={party.id}>
+              <RanksPartyRow party={party} rank={null} />
+            </RanksListItem>
+          ))}
+        </RanksUnrankedGroup>
+      )}
+    </>
+  );
+}
+
+// ─── Hosts ───────────────────────────────────────────────────────────────────
+
+function HostsRanks({
+  ranked,
+  unranked,
+  onPeriodChange,
+}: {
+  ranked: HostRanking[];
+  unranked: HostRanking[];
+  onPeriodChange: (p: RankingsFilter) => void;
+}) {
+  const rule = `${HOST_MIN_PARTIES} parties and ${HOST_MIN_VOTES} votes`;
+
+  if (ranked.length === 0 && unranked.length === 0) {
+    const next = emptyStateNextFilter('by-hosts');
+    return (
+      <RanksEmpty
+        title="No hosts ranked yet."
+        description={`A host ranks after ${rule}.`}
+        actionLabel={`See ${PERIOD_LABELS[next].sentence}`}
+        onAction={() => onPeriodChange(next)}
+      />
+    );
+  }
+
+  const top = ranked.slice(0, 3);
+  const rest = ranked.slice(3);
+
+  return (
+    <>
+      {top.length > 0 ? (
+        <RanksPodium key="by-hosts" count={top.length} aria-label={`Top ${top.length} hosts`} className="mt-4">
+          {podiumOrder(top).map((host) => (
+            <RanksPodiumHostStep key={host.hostCode} host={host} rank={top.indexOf(host) + 1} />
+          ))}
+        </RanksPodium>
+      ) : (
+        <RanksNothingRanked>{`No host has ${rule} yet.`}</RanksNothingRanked>
+      )}
+
+      {rest.length > 0 && (
+        <RanksList aria-label={`Ranks 4 to ${ranked.length}`}>
+          {rest.map((host, i) => (
+            <RanksListItem key={host.hostCode}>
+              <RanksHostRow host={host} rank={i + 4} />
+            </RanksListItem>
+          ))}
+        </RanksList>
+      )}
+
+      {unranked.length > 0 && (
+        <RanksUnrankedGroup title="Not ranked yet" note={`Needs ${rule}.`}>
+          {unranked.map((host) => (
+            <RanksListItem key={host.hostCode}>
+              <RanksHostRow host={host} rank={null} />
+            </RanksListItem>
+          ))}
+        </RanksUnrankedGroup>
+      )}
+    </>
+  );
+}
+
+function InfoIcon() {
+  return (
+    <svg aria-hidden viewBox="0 0 24 24" className="size-5" fill="none" stroke="currentColor" strokeWidth={2}>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M12 11v5" strokeLinecap="round" />
+      <circle cx="12" cy="7.75" r="0.6" fill="currentColor" />
+    </svg>
   );
 }

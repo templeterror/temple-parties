@@ -1,7 +1,7 @@
 /**
  * StickyActionBar — the fixed bar pinned to the bottom of the party page
- * holding the primary actions (GOING + navigate, or BUY TICKETS + navigate
- * on ticketed parties).
+ * holding its actions (components/party/PartyActionBar: the one primary —
+ * I'm going or Buy tickets — plus directions and share).
  *
  * "Sticky" here means position:fixed — the actions stay reachable no matter
  * how far you scroll. Pages that render it must pad their own bottom

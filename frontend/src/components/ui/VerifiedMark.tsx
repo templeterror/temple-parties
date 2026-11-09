@@ -13,11 +13,13 @@
  * no margin of its own: the host row owns the spacing (`gap-1`).
  *
  * Two modes, picked by whether `onShowToast` is passed:
- *  - with it (party-page HostRow): a real <button> — on phones (no hover) a
- *    tap explains the badge via toast; on desktop the title tooltip does that
- *    job, so the cursor stays default.
- *  - without it (feed cards): a static, non-interactive mark. The card is one
- *    tap target, same as the crown there.
+ *  - with it: a real <button> — on phones (no hover) a tap explains the
+ *    badge via toast; on desktop the title tooltip does that job, so the
+ *    cursor stays default. (No caller today: the party page went static
+ *    when its crown's hit area grew to 44px — two padded targets 4px apart
+ *    would overlap.)
+ *  - without it (feed cards, party page, map sheet): a static mark with a
+ *    title tooltip and an sr-only "Verified".
  */
 
 /** The scalloped-seal outline: 12 outward arcs meeting at r≈9.6 in a 24-box. */

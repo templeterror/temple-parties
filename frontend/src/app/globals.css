@@ -834,6 +834,413 @@ html {
   }
 }
 
+/* ------------------------------------------------------------------ */
+/* Ranks — the Ranks page (components/ranks/). What Tailwind can't say:   */
+/* the podium grid (steps on one baseline, #2 · #1 · #3), container-sized */
+/* type on flyers/plates, half-pixel hairlines, press + menu + rise       */
+/* motion. Colours stay in the components as temple.* classes.            */
+/* Spec: DESIGN.md decision log, 2026-11-09 "Ranks → Podium".             */
+/* ------------------------------------------------------------------ */
+
+.ranks {
+  --ranks-ease: cubic-bezier(0.23, 1, 0.32, 1);
+  --ranks-hairline: 1px;
+}
+
+/* Retina: list dividers at half a pixel so they recede (emil-surfaces). */
+@media (min-resolution: 2dppx) {
+  .ranks {
+    --ranks-hairline: 0.5px;
+  }
+}
+
+/* Podium stage: steps bottom-align on one grid row, so the plinths share a
+   baseline; #1's column is the widest (≈40%). */
+.ranks-podium {
+  display: grid;
+  align-items: end;
+  column-gap: 8px;
+  justify-content: center;
+}
+
+.ranks-podium[data-count='3'] {
+  grid-template-columns: 3fr 4fr 3fr;
+}
+
+.ranks-podium[data-count='2'] {
+  grid-template-columns: 30% 40%;
+}
+
+.ranks-podium[data-count='1'] {
+  grid-template-columns: 40%;
+}
+
+/* DOM order is already 2 · 1 · 3 (podiumOrder in utils/ranks.ts); the
+   column pins below keep each step in place whatever the count. */
+.ranks-podium__step {
+  display: flex;
+  flex-direction: column;
+  grid-row: 1;
+  min-width: 0;
+}
+
+.ranks-podium__step[data-rank='2'] {
+  grid-column: 1;
+}
+
+.ranks-podium[data-count='2'] .ranks-podium__step[data-rank='1'],
+.ranks-podium[data-count='3'] .ranks-podium__step[data-rank='1'] {
+  grid-column: 2;
+}
+
+.ranks-podium__step[data-rank='3'] {
+  grid-column: 3;
+}
+
+.ranks-podium[data-count='1'] .ranks-podium__step[data-rank='1'] {
+  grid-column: 1;
+}
+
+.ranks-podium__figure {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 0;
+}
+
+.ranks-podium__caption {
+  display: block;
+  min-width: 0;
+  padding: 10px 2px 0;
+  text-align: center;
+}
+
+/* Every caption reserves a 2-line title so the captions line up under
+   steps of different heights. A lone step has nothing to line up with. */
+.ranks-podium__title {
+  min-height: 38px;
+}
+
+.ranks-podium[data-count='1'] .ranks-podium__title {
+  min-height: 0;
+}
+
+/* No-poster flyer: the word sizes itself to the frame's width. */
+.ranks-podium__flyer {
+  container-type: inline-size;
+}
+
+.ranks-podium__wordtile {
+  font-size: min(30px, calc((100cqw - 16px) / (var(--ranks-word-len) * 0.68)));
+  overflow-wrap: anywhere;
+}
+
+/* Host plates stand on the step like a disc. */
+.ranks-podium__disc {
+  width: 84%;
+  container-type: inline-size;
+}
+
+.ranks-podium__monogram {
+  font-size: 34cqw;
+  line-height: 1;
+  letter-spacing: -0.02em;
+}
+
+/* Plinths: height carries the hierarchy; the numeral is white on
+   temple-surface (≈17:1), never a low-contrast medal colour. */
+.ranks-podium__plinth {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: center;
+}
+
+.ranks-podium__plinth[data-rank='1'] {
+  height: 64px;
+}
+
+.ranks-podium__plinth[data-rank='2'] {
+  height: 44px;
+}
+
+.ranks-podium__plinth[data-rank='3'] {
+  height: 32px;
+}
+
+.ranks-podium__plinth[data-rank='1'] .ranks-podium__numeral {
+  font-size: 36px;
+}
+
+.ranks-podium__plinth[data-rank='2'] .ranks-podium__numeral {
+  font-size: 26px;
+}
+
+.ranks-podium__plinth[data-rank='3'] .ranks-podium__numeral {
+  font-size: 22px;
+}
+
+/* Rise: on mount and every period change (the stage is keyed by period).
+   #3 → #2 → #1 — the winner lands last, as the payoff. 200ms, 40ms apart.
+   `backwards` (not `both`) so the finished animation stops owning
+   transform and the :active press can still scale the step. */
+@keyframes ranks-podium-rise {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.ranks-podium:not(.ranks-podium--ghost) .ranks-podium__step {
+  animation: ranks-podium-rise 200ms var(--ranks-ease) backwards;
+}
+
+.ranks-podium:not(.ranks-podium--ghost) .ranks-podium__step[data-rank='2'] {
+  animation-delay: 40ms;
+}
+
+.ranks-podium:not(.ranks-podium--ghost) .ranks-podium__step[data-rank='1'] {
+  animation-delay: 80ms;
+}
+
+/* List rows: bare on black, split by a solid hairline (border colour is
+   the temple-surface-2 class on the <li>). */
+.ranks__divided + .ranks__divided {
+  border-top-width: var(--ranks-hairline);
+  border-top-style: solid;
+}
+
+/* Press feedback: transform only, 120ms, interruptible — the Deck's. */
+.ranks__press {
+  transition: transform 120ms var(--ranks-ease);
+  touch-action: manipulation;
+}
+
+.ranks__press:active {
+  transform: scale(0.97);
+}
+
+/* Period menu: grows out of its trigger (top-right) in 150ms; closes
+   instantly. The chevron turns with it. */
+@keyframes ranks-menu-in {
+  from {
+    opacity: 0;
+    transform: scale(0.97) translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.ranks-menu {
+  transform-origin: top right;
+  animation: ranks-menu-in 150ms var(--ranks-ease);
+}
+
+.ranks-menu__chevron {
+  transition: transform 150ms var(--ranks-ease);
+}
+
+.ranks-menu__chevron[data-open] {
+  transform: rotate(180deg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ranks-podium .ranks-podium__step,
+  .ranks-menu {
+    animation: none;
+  }
+
+  .ranks__press,
+  .ranks-menu__chevron {
+    transition: none;
+  }
+
+  .ranks__press:active {
+    transform: none;
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* Party page — /party/[id] + its demo twin (components/party/). What   */
+/* Tailwind can't say: the viewport-sized stage, the wing fade, inset   */
+/* half-pixel hairlines, press / hover, the Copy → ✓ swap and the one   */
+/* mount entrance. Colours are black/white alpha; the rest stays in the */
+/* components as temple.* classes.                                      */
+/* Spec: DESIGN.md decision log, 2026-11-09 "Party page → Deck".        */
+/* ------------------------------------------------------------------ */
+
+.party-page {
+  --party-page-ease: cubic-bezier(0.23, 1, 0.32, 1);
+  --party-page-hairline: 1px;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Retina: list dividers at half a pixel so they recede (emil-surfaces). */
+@media (min-resolution: 2dppx) {
+  .party-page {
+    --party-page-hairline: 0.5px;
+  }
+}
+
+/* Content clears the fixed action bar (44px control + 14px padding x2 +
+   1px border ≈ 73px, plus the home indicator) with room to breathe. */
+.party-page__body {
+  padding-bottom: calc(112px + env(safe-area-inset-bottom, 0px));
+}
+
+/* Keyboard focus never lands under the fixed bar: the window scrolls a
+   focused control clear of it. :has() scopes it to this page. */
+html:has(.party-page__body) {
+  scroll-padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px));
+}
+
+/* Stage: about 60% of the smallest phone viewport, never so tall that the
+   title falls below the fold. No flyer → a shorter typographic tile. */
+.party-page__hero {
+  height: clamp(300px, 60svh, 640px);
+}
+
+.party-page__hero--tile {
+  height: clamp(220px, 34svh, 300px);
+}
+
+/* The flyer box and the back disc start under the status bar. */
+.party-page__flyer,
+.party-page__back {
+  top: max(12px, env(safe-area-inset-top, 0px));
+}
+
+/* Wings (and the no-poster surface) fade into the black page — a mask, not
+   an overlay, so the info panel sits on black with no seam. */
+.party-page__fade {
+  -webkit-mask-image: linear-gradient(to bottom, black 0%, black 55%, rgba(0, 0, 0, 0.6) 75%, rgba(0, 0, 0, 0.2) 90%, transparent 100%);
+  mask-image: linear-gradient(to bottom, black 0%, black 55%, rgba(0, 0, 0, 0.6) 75%, rgba(0, 0, 0, 0.2) 90%, transparent 100%);
+}
+
+/* No-poster tile: the title as texture, read from its first word below the
+   back disc; a long title runs into the fade instead of a hard clip. */
+.party-page__tile {
+  top: 64px;
+  bottom: 0;
+  overflow: hidden;
+  text-wrap: balance;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* The grouped list: hairlines inset to the text column (not the icon). */
+.party-page__row + .party-page__row > .party-page__row-body {
+  border-top: var(--party-page-hairline) solid rgba(255, 255, 255, 0.08);
+}
+
+/* Mount entrance: once, 200ms, strong ease-out — the card growing into the
+   page. `backwards` (not `both`) so the finished animation stops owning
+   transform: a lingering transform would trap the crown's fixed modal. */
+.party-page__enter {
+  animation: party-page-in 200ms var(--party-page-ease) backwards;
+}
+
+@keyframes party-page-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Press: transform only, 120ms, interruptible. Controls aren't selectable. */
+.party-page__press {
+  transition:
+    transform 120ms var(--party-page-ease),
+    opacity 150ms var(--party-page-ease);
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+
+.party-page__press:active {
+  transform: scale(0.97);
+}
+
+/* Outlined controls: hover lifts a white wash on a pseudo-layer (opacity
+   only, fine pointers only — no sticky hover after a tap). */
+.party-page__ghost {
+  position: relative;
+  isolation: isolate;
+}
+
+.party-page__ghost::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  background: rgba(255, 255, 255, 0.08);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 150ms var(--party-page-ease);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .party-page__ghost:hover::before {
+    opacity: 1;
+  }
+
+  .party-page__primary:hover {
+    opacity: 0.9;
+  }
+}
+
+/* Copy → ✓ swap: crossfade + a small scale, 150ms. */
+.party-page__swap-idle,
+.party-page__swap-done {
+  transition:
+    opacity 150ms var(--party-page-ease),
+    transform 150ms var(--party-page-ease);
+}
+
+.party-page__swap-done {
+  opacity: 0;
+  transform: scale(0.9);
+}
+
+.party-page__swap[data-copied] .party-page__swap-idle {
+  opacity: 0;
+  transform: scale(0.9);
+}
+
+.party-page__swap[data-copied] .party-page__swap-done {
+  opacity: 1;
+  transform: scale(1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .party-page__enter {
+    animation: none;
+  }
+
+  .party-page__press,
+  .party-page__ghost::before,
+  .party-page__swap-idle,
+  .party-page__swap-done {
+    transition: none;
+  }
+
+  .party-page__press:active {
+    transform: none;
+  }
+}
+
 /* Sponsor popup (Leaflet). The PARTY popup is gone — party pins open
    components/map/PartySheet instead — so these shared popup rules only
    serve location sponsors (lib/sponsors.ts; directories like TU Eats
