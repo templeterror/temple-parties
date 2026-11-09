@@ -20,12 +20,15 @@ import { MapContainer, TileLayer, Marker, Popup, useMap, useMapEvents } from 're
 import { Party, PartyDay } from '@/lib/types';
 import { displayDoorTime, getDefaultDay, parseDoorsOpen, pickSmartDefaultDay } from '@/utils/dateHelpers';
 import {
-  PARTY_ZONE_BOUNDS,
+  PHILLY_BOUNDS,
+  TEMPLE_CENTER,
+  CAMPUS_DEFAULT_ZOOM,
   zoomToFitInside,
   pinVariantFor,
   partyPhase,
   showHostChip,
   DEFAULT_HOST_BRAND,
+  needsExpandedMapView,
 } from '@/utils/mapHelpers';
 import { ringPinHtml, discPinHtml, discPinSize, discPinCellSize, pinLabelFor, RING_PIN_SIZE, RING_PIN_ANCHOR } from '@/utils/mapPins';
 import L from 'leaflet';
@@ -56,10 +59,6 @@ interface MapContentProps {
   onSheetOpenChange?: (open: boolean) => void;
   now?: Date;
 }
-
-// Temple University campus center — where the map opens (zoom 15). Sits
-// inside PARTY_ZONE_BOUNDS, so the lock below never has to move it.
-const TEMPLE_CENTER: [number, number] = [39.9812, -75.1550];
 
 // CARTO raster tiles watermark without ?key= — set NEXT_PUBLIC_CARTO_API_KEY
 // (free at https://carto.com/basemaps/apikey). Keep dark_all, not voyager.
@@ -97,16 +96,15 @@ function TempleLabel() {
 }
 
 /**
- * Keeps the map inside the party zone (York → Girard, 5th → 19th).
+ * Keeps the map inside Philadelphia (city rectangle).
  *
  * Panning is handled by `maxBounds` on the MapContainer. This component
- * handles ZOOM-OUT: the floor is "the zoom where the zone exactly fills
- * the screen", so no pixel outside the zone can ever be on screen at
- * rest. That number depends on the viewport — roughly 15.2 on a phone
- * (the zone is only ~2.2 km tall) and ~16.2 on a wide desktop window —
- * so it has to be computed against the live map, not hard-coded, and
- * recomputed whenever the viewport changes (rotation, iOS toolbar
- * collapse, desktop window drag). Leaflet fires `resize` for all of those.
+ * handles ZOOM-OUT: the floor is "the zoom where the city exactly fills
+ * the screen", so no pixel outside Philly can ever be on screen at
+ * rest. That number depends on the viewport, so it has to be computed
+ * against the live map, not hard-coded, and recomputed whenever the
+ * viewport changes (rotation, iOS toolbar collapse, desktop window drag).
+ * Leaflet fires `resize` for all of those.
  *
  * Leaflet's own `getBoundsZoom(bounds, true)` would do this, but it snaps
  * to whole zoom levels (`zoomSnap`) and clamps to the *current* minZoom —
@@ -114,11 +112,11 @@ function TempleLabel() {
  * down. We project the box ourselves and hand the raw math to
  * `zoomToFitInside`.
  */
-function PartyZoneLock() {
+function PhillyBoundsLock() {
   const map = useMap();
 
   useEffect(() => {
-    const zone = L.latLngBounds(PARTY_ZONE_BOUNDS);
+    const zone = L.latLngBounds(PHILLY_BOUNDS);
 
     const apply = () => {
       const viewport = map.getSize();
@@ -127,7 +125,7 @@ function PartyZoneLock() {
       // sensible to compute; the next resize will try again.
       if (viewport.x === 0 || viewport.y === 0 || zoom == null) return;
 
-      // How many screen pixels the zone covers at the current zoom.
+      // How many screen pixels the city covers at the current zoom.
       const box = L.bounds(
         map.project(zone.getNorthWest(), zoom),
         map.project(zone.getSouthEast(), zoom),
@@ -145,8 +143,8 @@ function PartyZoneLock() {
 
     apply();
     map.on('resize', apply);
-    // The map wrapper grows/shrinks when the pin drawer hides the tab bar
-    // (pb-20 comes off). Window `resize` does not fire for that — observe
+    // The map wrapper grows/shrinks when the pin drawer hides the Dock
+    // (its Dock clearance comes off). Window `resize` does not fire for that — observe
     // the container and tell Leaflet its viewport changed.
     const ro = new ResizeObserver(() => {
       map.invalidateSize({ animate: false });
@@ -157,6 +155,47 @@ function PartyZoneLock() {
       ro.disconnect();
     };
   }, [map]);
+
+  return null;
+}
+
+/**
+ * Default camera for the selected night: campus zoom 15 unless a pin sits
+ * outside the party zone, in which case fit every pin of that night.
+ * Deep links own the camera until the user switches days.
+ */
+function DefaultCamera({
+  parties,
+  pinKey,
+  skip,
+}: {
+  parties: Array<{ latitude: number; longitude: number }>;
+  pinKey: string;
+  skip: boolean;
+}) {
+  const map = useMap();
+
+  // pinKey is the identity of `parties` (ids only) so going-count ticks
+  // don't refit the camera.
+  useEffect(() => {
+    if (skip) return;
+
+    if (parties.length === 0 || !needsExpandedMapView(parties)) {
+      map.setView(TEMPLE_CENTER, CAMPUS_DEFAULT_ZOOM, { animate: false });
+      return;
+    }
+
+    const bounds = L.latLngBounds(
+      parties.map((p) => [p.latitude, p.longitude] as [number, number]),
+    );
+    map.fitBounds(bounds, {
+      paddingTopLeft: [24, 96],
+      paddingBottomRight: [24, 80],
+      maxZoom: CAMPUS_DEFAULT_ZOOM,
+      animate: false,
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- pinKey stands in for parties
+  }, [map, skip, pinKey]);
 
   return null;
 }
@@ -288,12 +327,14 @@ export default function MapContent({ parties, topPartyIds, userGoingParties, onG
   const iconCacheRef = useRef<Map<string, L.DivIcon>>(new Map());
   const sheetRef = useRef<HTMLDivElement>(null);
   const [focusConsumed, setFocusConsumed] = useState(false);
+  // Deep-link pan owns the camera until the user switches nights.
+  const [holdDefaultCamera, setHoldDefaultCamera] = useState(false);
 
   // Selection = which party's sheet is open. The camera target is set once
   // per selection (not derived every render) so the pan only fires once.
   const [selectedPartyId, setSelectedPartyId] = useState<string | null>(null);
   const [cameraTarget, setCameraTarget] = useState<CameraTarget | null>(null);
-  const [zoom, setZoom] = useState(15);
+  const [zoom, setZoom] = useState(CAMPUS_DEFAULT_ZOOM);
   // The list endpoint doesn't carry hostStats ("12 parties hosted"); the
   // detail endpoint does. Fetched once per party the first time its sheet
   // opens, kept for the session.
@@ -385,6 +426,7 @@ export default function MapContent({ parties, topPartyIds, userGoingParties, onG
       zoom: 17,
     });
     setFocusConsumed(true);
+    setHoldDefaultCamera(true);
     const url = new URL(window.location.href);
     if (url.searchParams.has('party')) {
       url.searchParams.delete('party');
@@ -451,21 +493,23 @@ export default function MapContent({ parties, topPartyIds, userGoingParties, onG
           activeKey={selectedDay}
           onChange={(key) => {
             closeSheet();
+            setHoldDefaultCamera(false);
             setSelectedDay(key as PartyDay);
             trackEvent('day_tab_switched', { day: key, source: 'map' });
           }}
         />
       </div>
 
-      {/* maxBounds = the party zone (York → Girard, 5th → 19th): you can't
-          pan outside it. maxBoundsViscosity 0 is the rubber-band feel —
-          drag a little past the edge and it springs back on release
-          (1 would be a hard wall). Zoom-out is floored by PartyZoneLock
-          so the zone always fills the screen. */}
+      {/* maxBounds = Philadelphia: you can't pan outside the city.
+          maxBoundsViscosity 0 is the rubber-band feel — drag a little
+          past the edge and it springs back on release (1 would be a hard
+          wall). Zoom-out is floored by PhillyBoundsLock so the city always
+          fills the screen. Default camera is still campus unless a pin
+          that night sits outside the party zone. */}
       <MapContainer
         center={TEMPLE_CENTER}
-        zoom={15}
-        maxBounds={PARTY_ZONE_BOUNDS}
+        zoom={CAMPUS_DEFAULT_ZOOM}
+        maxBounds={PHILLY_BOUNDS}
         maxBoundsViscosity={0}
         zoomControl={false}
         scrollWheelZoom={true}
@@ -476,7 +520,12 @@ export default function MapContent({ parties, topPartyIds, userGoingParties, onG
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>, &copy; <a href="https://carto.com/attributions">CARTO</a>'
           url={CARTO_TILE_URL}
         />
-        <PartyZoneLock />
+        <PhillyBoundsLock />
+        <DefaultCamera
+          parties={filteredParties}
+          pinKey={filteredParties.map((p) => `${p.id}:${p.latitude}:${p.longitude}`).join('|')}
+          skip={Boolean(deepLinkParty) || holdDefaultCamera}
+        />
         <ZoomWatcher onZoom={setZoom} />
         <SheetScrim active={sheetOpen} onDismiss={closeSheet} />
         <SelectionCamera target={cameraTarget} sheetRef={sheetRef} />

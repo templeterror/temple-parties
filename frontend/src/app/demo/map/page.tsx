@@ -64,7 +64,7 @@ export default function DemoMapPage() {
       <div className="h-screen lg:h-[calc(100vh-4rem)] flex flex-col">
         <Header title="Party Map" />
         <DemoBanner weekendOf={weekendOf} />
-        <div className={`flex-1 lg:pb-0 ${sheetOpen ? '' : 'pb-20'}`}>
+        <div className={`flex-1 lg:pb-0 ${sheetOpen ? '' : 'pb-[calc(var(--dock-footprint)+0.5rem)]'}`}>
           <MapView
             parties={parties}
             topPartyIds={topPartyIds}

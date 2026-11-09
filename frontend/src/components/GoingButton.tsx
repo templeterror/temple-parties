@@ -74,7 +74,7 @@ function GoingButton({
     <button
       onClick={handleClick}
       title={userIsGoing ? 'Click to un-go' : 'Click to go'}
-      className={`${shapeClass} ${toneClass} font-bold uppercase transition-all duration-150 flex items-center justify-center gap-1.5 font-montserrat hover:opacity-90 active:scale-[0.98] ${
+      className={`${shapeClass} ${toneClass} font-bold uppercase tabular-nums transition-all duration-150 flex items-center justify-center gap-1.5 font-montserrat hover:opacity-90 active:scale-[0.98] ${
         isAnimating ? 'animate-going-click' : ''
       }`}
     >

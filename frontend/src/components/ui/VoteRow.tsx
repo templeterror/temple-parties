@@ -21,6 +21,12 @@ import VoteArrow from './VoteArrow';
 
 export type RatingWindowState = 'inactive' | 'open' | 'locked';
 
+/** Maps the party's two server booleans onto the one window state the row speaks. */
+export function ratingWindowState(isRatingActive: boolean, isRatingLocked: boolean): RatingWindowState {
+  if (isRatingLocked) return 'locked';
+  return isRatingActive ? 'open' : 'inactive';
+}
+
 interface VoteRowProps {
   likeCount: number | null;
   dislikeCount: number | null;
@@ -69,7 +75,7 @@ export default function VoteRow({
     <div
       {...interactiveProps}
       title={STATE_TITLES[state]}
-      className={`flex items-center gap-3 shrink-0 ${state === 'open' && onRate ? 'cursor-pointer' : ''}`}
+      className={`flex items-center gap-3 shrink-0 tabular-nums ${state === 'open' && onRate ? 'cursor-pointer' : ''}`}
     >
       {/* The fill lives on the ARROW only — your vote's icon goes solid
           light purple, nothing wraps around it. */}

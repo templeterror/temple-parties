@@ -27,10 +27,13 @@ export default function AddressGate({
 
   if (!shown) {
     return (
+      // relative z-[2]: lifts the button above a card's stretched link (z-1)
+      // so the tap reaches it. py/-my grows the hit area to ~44px tall
+      // without moving the line (the parent must not clip it).
       <button
         type="button"
         onClick={onViewAddress}
-        className="underline underline-offset-2 hover:text-white/90 transition-colors"
+        className="relative z-[2] py-[13px] -my-[13px] underline underline-offset-2 hover:text-white/90 transition-colors"
       >
         Sign in to view address
       </button>

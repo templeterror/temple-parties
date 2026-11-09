@@ -1,8 +1,20 @@
 'use client';
 
 /**
- * BottomNav — the app's chrome: a 4-tab bottom bar on mobile (Home / Map /
- * Ranks / Profile, per the WF-B2 redesign) and a fixed top bar on desktop.
+ * BottomNav — the app's chrome: the mobile Dock (Home / Map / Ranks /
+ * Profile) and a fixed top bar on desktop. Spec: DESIGN.md decision log,
+ * 2026-11-07 "Nav chrome → Dock + slim Classic top".
+ *
+ * The Dock is a detached floating pill above the safe area — solid
+ * temple-surface, hairline ring, no glass. Icons are the owner's Figma
+ * exports in /public/icons (the `-active` file when active); only the active
+ * tab shows its label. Tapping Home while on Home emits HomeReselect
+ * (PartyDeck jumps back to #1) instead of re-navigating.
+ *
+ * Its footprint is the CSS vars --dock-pill / --dock-inset in globals.css,
+ * and the nav carries `data-bottom-chrome` so useDeckFrame reserves exactly
+ * its height. The pill floats: the full-width nav is pointer-events-none so
+ * content beside the pill stays tappable.
  *
  * On /demo/* paths every link swaps to its demo twin (and Profile is hidden)
  * so the read-only demo can never leak into the live app.
@@ -11,45 +23,24 @@
  * it hit /profile, which redirects them to /login — no separate login link
  * needed anywhere else.
  *
- * `desktopOnly` supports "pushed" routes (the party page): they suppress the
- * mobile tab bar in favor of a back arrow + their own sticky action bar,
- * while desktop keeps its top bar.
+ * `desktopOnly` supports "pushed" routes (the party page) and bottom sheets
+ * (HostTonightPrompt, the map PartySheet): they take the Dock's place on
+ * mobile, while desktop keeps its top bar.
  */
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import type { ReactNode } from 'react';
+import type { CSSProperties, MouseEvent } from 'react';
 import Wordmark from '@/components/ui/Wordmark';
+import { useEmitHomeReselect } from '@/contexts/HomeReselectContext';
 
 type NavKey = 'home' | 'map' | 'rankings' | 'profile';
 
-// Inline SVGs (stroke = currentColor) so the active tint is pure CSS —
-// no separate "-active" asset needed per icon like the old PNG approach.
-function HomeIcon() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" className="size-[22px]" aria-hidden>
-      <path d="M4 10.5 12 4l8 6.5V19a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 19v-8.5Z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
-      <path d="M9.5 20.5v-7h5v7" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
+/** White, never brand-coloured (emil-ui-polish). */
+const FOCUS_RING =
+  'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white';
 
-function MapIcon() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" className="size-[22px]" aria-hidden>
-      <path d="M9 18.5 3 21V6l6-2.5M9 18.5 15 21M9 18.5V3.5M15 21l6-2.5V4l-6 2.5M15 21V6.5M15 6.5 9 3.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
-
-function RanksIcon() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" className="size-[22px]" aria-hidden>
-      <path d="M8 20V10M12 20V4M16 20v-6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-    </svg>
-  );
-}
-
+/** No Figma asset exists for Profile — the original glyph (stroke = currentColor). */
 function ProfileIcon() {
   return (
     <svg viewBox="0 0 24 24" fill="none" className="size-[22px]" aria-hidden>
@@ -59,15 +50,42 @@ function ProfileIcon() {
   );
 }
 
-const ICONS: Record<NavKey, () => ReactNode> = {
-  home: HomeIcon,
-  map: MapIcon,
-  rankings: RanksIcon,
-  profile: ProfileIcon,
-};
+/**
+ * Dock icon. Active: the `-active` Figma asset as-is (light-purple fill,
+ * purple stroke). Idle: the idle asset strokes `#0B0B0B` at 50% — invisible
+ * on black as an <img> — so it's drawn as a CSS mask over white: same
+ * geometry, and the asset's own 50% stroke opacity lands it near
+ * temple-muted.
+ */
+function DockGlyph({ item, active }: { item: (typeof MAIN_NAV)[number]; active: boolean }) {
+  if (!item.icon) {
+    return (
+      <span className={`flex shrink-0 ${active ? 'text-temple-purple' : 'text-temple-muted'}`}>
+        <ProfileIcon />
+      </span>
+    );
+  }
+  if (active) {
+    return (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img src={item.iconActive} alt="" aria-hidden className="block size-[22px] shrink-0 object-contain" />
+    );
+  }
+  const mask: CSSProperties = {
+    WebkitMaskImage: `url(${item.icon})`,
+    maskImage: `url(${item.icon})`,
+    WebkitMaskSize: 'contain',
+    maskSize: 'contain',
+    WebkitMaskRepeat: 'no-repeat',
+    maskRepeat: 'no-repeat',
+    WebkitMaskPosition: 'center',
+    maskPosition: 'center',
+  };
+  return <span aria-hidden className="block size-[22px] shrink-0 bg-white" style={mask} />;
+}
 
-// icon/iconActive file paths survive only for the desktop bar, which still
-// uses the original SVG assets next to its text labels.
+// Figma icon files: the Dock masks/uses them, the desktop bar shows them next
+// to its text labels. Profile has no asset (DockGlyph draws ProfileIcon).
 const MAIN_NAV: { key: NavKey; href: string; label: string; icon: string; iconActive: string }[] = [
   {
     key: 'home',
@@ -171,34 +189,60 @@ export default function BottomNav({ desktopOnly = false }: { desktopOnly?: boole
         </div>
       </nav>
 
-      {/* Mobile tab bar — suppressed on pushed routes via desktopOnly. */}
-      {!desktopOnly && (
-        <nav
-          className="lg:hidden fixed bottom-0 left-0 right-0 bg-temple-surface border-t border-white/10"
-          style={{ zIndex: 9999 }}
-        >
-          <div className="flex items-start justify-between px-8 pt-3 pb-[max(12px,env(safe-area-inset-bottom))]">
-            {nav.map((item) => {
-              const isActive = active === item.key;
-              const Icon = ICONS[item.key];
-              return (
-                <Link
-                  key={item.key}
-                  href={item.href}
-                  className={`flex flex-col items-center gap-1 min-w-[44px] transition-colors duration-200 ${
-                    isActive ? 'text-temple-purple' : 'text-temple-muted'
-                  }`}
-                  aria-label={item.label}
-                  aria-current={isActive ? 'page' : undefined}
-                >
-                  <Icon />
-                  <span className="font-montserrat font-medium text-[10px]">{item.label}</span>
-                </Link>
-              );
-            })}
-          </div>
-        </nav>
-      )}
+      {/* Mobile Dock — suppressed on pushed routes / under sheets via desktopOnly. */}
+      {!desktopOnly && <Dock nav={nav} active={active} onHome={pathname === homeHref} />}
     </>
+  );
+}
+
+function Dock({
+  nav,
+  active,
+  onHome,
+}: {
+  nav: typeof MAIN_NAV;
+  active: NavKey;
+  /** Already on the Home route itself (not just a Home-tab page like /create). */
+  onHome: boolean;
+}) {
+  const reselectHome = useEmitHomeReselect();
+
+  const handleHomeReselect = (e: MouseEvent<HTMLAnchorElement>) => {
+    e.preventDefault();
+    reselectHome();
+  };
+
+  return (
+    <nav
+      aria-label="Main"
+      data-bottom-chrome="dock"
+      className="lg:hidden pointer-events-none fixed inset-x-0 bottom-0 flex justify-center"
+      style={{ zIndex: 9999, paddingBottom: 'var(--dock-inset)' }}
+    >
+      <div className="pointer-events-auto flex h-[var(--dock-pill)] items-center gap-0.5 rounded-full bg-temple-surface p-1 shadow-[0_8px_24px_rgba(0,0,0,0.5)] ring-1 ring-inset ring-white/10">
+        {nav.map((item) => {
+          const isActive = active === item.key;
+          return (
+            <Link
+              key={item.key}
+              href={item.href}
+              onClick={isActive && item.key === 'home' && onHome ? handleHomeReselect : undefined}
+              aria-label={item.label}
+              aria-current={isActive ? 'page' : undefined}
+              className={`dock-press flex h-11 items-center justify-center rounded-full font-montserrat ${
+                isActive ? 'gap-2 bg-temple-surface-2 pl-3.5 pr-4' : 'w-12 hover:bg-white/[0.06]'
+              } ${FOCUS_RING}`}
+            >
+              <DockGlyph item={item} active={isActive} />
+              {isActive && (
+                <span aria-hidden className="text-[13px] font-semibold leading-none text-temple-purple-light">
+                  {item.label}
+                </span>
+              )}
+            </Link>
+          );
+        })}
+      </div>
+    </nav>
   );
 }

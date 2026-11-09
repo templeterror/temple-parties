@@ -344,7 +344,7 @@ export default function CreatePartyPage() {
 
   return (
     <AppShell>
-      <div className="pb-24 lg:pb-8 max-w-md mx-auto px-6 pt-10">
+      <div className="pb-[var(--dock-clearance)] lg:pb-8 max-w-md mx-auto px-6 pt-10">
         <div className="mb-8">
           <div className="flex items-center justify-between mb-6">
             <Link href="/profile" className="text-[#b24bf3] text-sm font-montserrat font-semibold">

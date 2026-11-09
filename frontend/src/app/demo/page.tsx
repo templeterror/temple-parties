@@ -3,20 +3,20 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import Header from '@/components/Header';
 import DayTabs from '@/components/DayTabs';
-import PartyCard from '@/components/PartyCard';
-import HeadlinerCard from '@/components/HeadlinerCard';
-import SectionLabel from '@/components/ui/SectionLabel';
+import PartyDeck from '@/components/feed/PartyDeck';
 import InviteModal from '@/components/InviteModal';
 import EmptyState from '@/components/EmptyState';
 import Toast from '@/components/Toast';
 import AppShell from '@/components/AppShell';
 import DemoBanner from '@/components/DemoBanner';
-import { getAlsoTonightLabel, getDefaultDay, pickSmartDefaultDay } from '@/utils/dateHelpers';
+import { getDefaultDay, pickSmartDefaultDay } from '@/utils/dateHelpers';
 import { shareContent } from '@/utils/shareHelpers';
 import useToast from '@/hooks/useToast';
 import { useDemoParties } from '@/contexts/DemoSessionContext';
 import { useDemoMode } from '@/contexts/DemoModeContext';
 import { partyHref } from '@/lib/authHelpers';
+// SPONSOR (disabled by owner 2026-11-07 — restore by uncommenting this import and the `sponsor` prop on PartyDeck below):
+// import { PRIMARY_SPONSOR } from '@/lib/sponsors';
 import { trackEvent } from '@/utils/analytics';
 import type { PartyDay } from '@/lib/types';
 
@@ -36,10 +36,8 @@ export default function DemoHomePage() {
     isGoing,
     toggleGoing,
     ensureGoing,
-    getUserRating,
     filteredParties,
     parties: allParties,
-    topPartyId,
     dayCounts,
   } = useDemoParties(selectedDay);
 
@@ -101,36 +99,9 @@ export default function DemoHomePage() {
     }
   }, [lastGoingPartyId, allParties, topGoingParty, showToast, demo]);
 
-  const headliner = filteredParties.find((p) => p.id === topPartyId) ?? filteredParties[0];
-  const rest = headliner ? filteredParties.filter((p) => p.id !== headliner.id) : [];
-  const feedCardProps = (party: (typeof filteredParties)[number]) => ({
-    id: party.id,
-    title: party.title,
-    host: party.host,
-    category: party.category,
-    doorsOpen: party.doorsOpen,
-    address: party.address,
-    goingCount: party.goingCount,
-    isHyped: party.id === topPartyId,
-    userIsGoing: isGoing(party.id),
-    onGoingClick: handleGoingClick,
-    onNavigateClick: handleNavigateClick,
-    isAddressVisible: true,
-    onViewAddressClick: () => undefined,
-    likePercentage: party.likePercentage,
-    ratingCount: party.ratingCount,
-    userRating: getUserRating(party.id),
-    onRateClick: () => undefined,
-    isRatingActive: true,
-    isRatingLocked: false,
-    isVerified: party.isVerified,
-    posterImage: party.posterImage,
-    onShowToast: showToast,
-  });
-
   return (
     <AppShell>
-      <div className="pb-24 lg:pb-8">
+      <div className="pb-[var(--dock-clearance)] lg:pb-8">
         <Header />
         <DemoBanner weekendOf={weekendOf} />
 
@@ -142,25 +113,27 @@ export default function DemoHomePage() {
           saturdayDate={saturdayDate}
         />
 
-        <div className="max-w-xl mx-auto px-4 sm:px-6">
-          {!headliner ? (
+        {filteredParties.length === 0 ? (
+          <div className="max-w-xl mx-auto px-4 sm:px-6">
             <EmptyState selectedDay={selectedDay} leaderboardsHref="/demo/leaderboards" />
-          ) : (
-            <>
-              <HeadlinerCard {...feedCardProps(headliner)} />
-              {rest.length > 0 && (
-                <>
-                  <SectionLabel className="mb-3 mt-1">
-                    {getAlsoTonightLabel(selectedDay, rest.length, demoNow)}
-                  </SectionLabel>
-                  {rest.map((party) => (
-                    <PartyCard key={party.id} {...feedCardProps(party)} />
-                  ))}
-                </>
-              )}
-            </>
-          )}
-        </div>
+          </div>
+        ) : (
+          // Frozen clock (demoNow) and local-only RSVPs; the deck's own
+          // analytics are tagged demo: true via readOnly.
+          <PartyDeck
+            parties={filteredParties}
+            day={selectedDay}
+            now={demoNow}
+            isGoing={isGoing}
+            loggedOut={false}
+            onGoingClick={handleGoingClick}
+            onNavigateClick={handleNavigateClick}
+            /* SPONSOR SLIDE — disabled by owner 2026-11-07, restore by uncommenting:
+            sponsor={PRIMARY_SPONSOR}
+            */
+            readOnly
+          />
+        )}
       </div>
 
       <InviteModal

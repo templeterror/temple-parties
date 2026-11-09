@@ -59,7 +59,7 @@ export default function WhenWhereCard({
           <p className="min-w-0 font-montserrat font-bold text-[13.5px] text-white truncate">
             {address.split(',')[0]}
           </p>
-          <IconButton label="See on map" title="See this party on the map" onClick={onOpenMap} tone="outline" size="sm">
+          <IconButton label="See on map" title="See this party on the map" onClick={onOpenMap} tone="outline" size="md">
             <MapGlyph />
           </IconButton>
         </div>

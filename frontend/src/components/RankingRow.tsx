@@ -27,7 +27,7 @@ export function rankColor(rank: number): string {
 /** Small "people going" readout shared by both ranking cards. */
 export function GoingStat({ count }: { count: number }) {
   return (
-    <span className="flex items-center justify-end gap-1 font-montserrat text-[12px] text-temple-muted">
+    <span className="flex items-center justify-end gap-1 font-montserrat text-[12px] text-temple-muted tabular-nums">
       <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} aria-hidden>
         <path
           strokeLinecap="round"
@@ -55,7 +55,7 @@ function RankingRow({ rank, party, isBelowThreshold }: RankingRowProps) {
           isBelowThreshold ? 'opacity-60' : ''
         }`}
       >
-        <span className={`w-8 shrink-0 font-montserrat font-bold text-[22px] leading-none ${rankColor(rank)}`}>
+        <span className={`w-8 shrink-0 font-montserrat font-bold text-[22px] leading-none tabular-nums ${rankColor(rank)}`}>
           {rank}
         </span>
 

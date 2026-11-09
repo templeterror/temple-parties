@@ -157,7 +157,7 @@ export default function ProfilePage() {
 
   return (
     <AppShell>
-      <div className="pb-24 lg:pb-8">
+      <div className="pb-[var(--dock-clearance)] lg:pb-8">
         <Header title="Profile" />
 
         <div className="max-w-xl mx-auto px-4 sm:px-6 pt-3 flex flex-col gap-3.5 lg:pt-6">
@@ -344,7 +344,7 @@ export default function ProfilePage() {
                   value={greekLife}
                   onChange={(e) => setGreekLife(e.target.value.slice(0, 100))}
                   placeholder="Chapter or org"
-                  className="w-full px-3.5 py-2.5 bg-black border border-white/15 rounded-[10px] text-white font-montserrat text-sm focus:border-temple-purple focus:outline-none"
+                  className="w-full px-3.5 py-2.5 bg-black border border-white/15 rounded-[10px] text-white font-montserrat text-base focus:border-temple-purple focus:outline-none"
                 />
                 <SaveButton disabled={submitting} />
               </form>
@@ -366,7 +366,7 @@ export default function ProfilePage() {
                     setInstagram(e.target.value.replace(/[^a-zA-Z0-9._]/g, '').slice(0, 30))
                   }
                   placeholder="handle"
-                  className="w-full px-3.5 py-2.5 bg-black border border-white/15 rounded-[10px] text-white font-montserrat text-sm focus:border-temple-purple focus:outline-none"
+                  className="w-full px-3.5 py-2.5 bg-black border border-white/15 rounded-[10px] text-white font-montserrat text-base focus:border-temple-purple focus:outline-none"
                 />
                 <SaveButton disabled={submitting} />
               </form>

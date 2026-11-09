@@ -34,8 +34,10 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  maximumScale: 1,
-  userScalable: false,
+  // Lets env(safe-area-inset-*) report real values on iPhone (home bar,
+  // notch in landscape). Without it every inset is 0 and the Dock, sticky
+  // action bar, host prompt and party sheet fall back to their minimums.
+  viewportFit: "cover",
   themeColor: "#1a1a1a",
 };
 

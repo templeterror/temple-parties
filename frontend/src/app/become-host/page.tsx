@@ -133,13 +133,13 @@ export default function BecomeHostPage() {
   const rejected = application?.status === 'rejected';
   const stepIndex = step === 'pitch' ? 0 : step === 'form' ? 1 : 2;
   const inputClass =
-    'w-full px-3.5 py-3 bg-black border border-white/15 rounded-[10px] text-white font-montserrat text-sm focus:border-temple-purple focus:outline-none';
+    'w-full px-3.5 py-3 bg-black border border-white/15 rounded-[10px] text-white font-montserrat text-base focus:border-temple-purple focus:outline-none';
 
   return (
     <AppShell>
       {/* Vertically centered in the viewport (minus the tab bar) — the flow
           floats mid-screen instead of hugging the top. */}
-      <div className="max-w-md mx-auto px-4 pb-24 pt-8 min-h-[calc(100dvh-90px)] flex flex-col lg:min-h-[calc(100dvh-160px)]">
+      <div className="max-w-md mx-auto px-4 pb-[var(--dock-clearance)] pt-8 min-h-[calc(100dvh-90px)] flex flex-col lg:min-h-[calc(100dvh-160px)]">
         {/* my-auto (not justify-center) does the vertical centering: when the
             content is SHORT it floats mid-screen, and when it's taller than
             the viewport (dropdown open, keyboard up) it overflows downward
