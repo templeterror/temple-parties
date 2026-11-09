@@ -1,5 +1,5 @@
 /**
- * StatTile — the party-page fact tile: a big value over a tiny tracked label
+ * StatTile — the map PartySheet's fact tile (born on the WF-D party page): a big value over a tiny tracked label
  * ("$5 / COVER", "67 / GOING", "$15+ / TICKETS").
  *
  * Tiles sit in a row and share the width equally (flex-1 comes from the

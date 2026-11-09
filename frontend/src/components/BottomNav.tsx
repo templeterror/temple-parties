@@ -165,7 +165,9 @@ export default function BottomNav({ desktopOnly = false }: { desktopOnly?: boole
         <div className="ml-auto flex items-center gap-8">
           {nav.map((item) => {
             const isActive = active === item.key;
-            const desktopLabel = item.key === 'rankings' ? 'Leaderboards' : item.label;
+            // One name per place: the page title, the Dock, and this top bar
+            // all say "Ranks" (2026-11-09 Podium decision).
+            const desktopLabel = item.label;
             return (
               <Link
                 key={item.key}

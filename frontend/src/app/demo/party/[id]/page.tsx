@@ -4,32 +4,25 @@ import { useCallback, useState } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import AppShell from '@/components/AppShell';
-import GoingButton from '@/components/GoingButton';
 import InviteModal from '@/components/InviteModal';
 import Toast from '@/components/Toast';
-import PartyHero from '@/components/party/PartyHero';
-import HostRow from '@/components/party/HostRow';
-import WhenWhereCard from '@/components/party/WhenWhereCard';
-import PromoCard from '@/components/party/PromoCard';
-import RatingPanel from '@/components/party/RatingPanel';
-import Pill from '@/components/ui/Pill';
-import StatTile from '@/components/ui/StatTile';
-import SectionLabel from '@/components/ui/SectionLabel';
-import StickyActionBar from '@/components/ui/StickyActionBar';
-import NavigateIcon from '@/components/ui/NavigateIcon';
-import ShareIcon from '@/components/ui/ShareIcon';
 import DemoBanner from '@/components/DemoBanner';
-import { ratingWindowState } from '@/components/ui/VoteRow';
+import PartyPageView from '@/components/party/PartyPageView';
 import { useDemoSession } from '@/contexts/DemoSessionContext';
 import { useDemoMode } from '@/contexts/DemoModeContext';
 import useToast from '@/hooks/useToast';
 import { openMapsDirections, shareContent } from '@/utils/shareHelpers';
-import { coverTileValue } from '@/utils/coverPrice';
-import { getPartyDateLabel } from '@/utils/dateHelpers';
-import { voteCounts } from '@/utils/ratingHelpers';
+import { buildPartyPage } from '@/utils/partyPage';
 import { trackEvent } from '@/utils/analytics';
 import { partyHref } from '@/lib/authHelpers';
 
+/**
+ * Demo twin of the party page — the same PartyPageView, driven by the
+ * read-only demo session: RSVPs and votes live in local session state
+ * (useDemoSession), never the API, and the clock is the frozen demo night
+ * (`demoNow`, Fri 11:30 PM ET), so Friday reads live, Saturday upcoming and
+ * Thursday ended.
+ */
 export default function DemoPartyPage() {
   const params = useParams();
   const router = useRouter();
@@ -37,6 +30,8 @@ export default function DemoPartyPage() {
   const demo = useDemoMode();
   const {
     weekendOf,
+    demoNow,
+    topPartyIds,
     partyById,
     isGoing,
     toggleGoing,
@@ -133,141 +128,42 @@ export default function DemoPartyPage() {
     );
   }
 
+  // Demo counts always exist (the snapshot has them, with your local RSVP /
+  // vote overlaid by the demo session). The rating window is held open, as
+  // it always has been in the demo; the clock is the frozen demo night.
   const goingCount = party.goingCount ?? 0;
   const likePct = party.likePercentage ?? 0;
   const ratingCount = party.ratingCount ?? 0;
-  const userRating = getUserRating(party.id);
-  const votes = voteCounts(likePct, ratingCount);
-  const userIsGoing = isGoing(party.id);
-  const ticketed = !!party.ticketUrl;
-  const windowState = ratingWindowState(true, false);
-
-  const hostSubtitle = party.hostStats
-    ? `${party.category} · ${party.hostStats.partiesHosted} ${party.hostStats.partiesHosted === 1 ? 'party' : 'parties'} hosted · ↑ ${Math.round(party.hostStats.avgLikePercentage)}% avg`
-    : undefined;
+  const model = buildPartyPage({
+    party: { ...party, goingCount, likePercentage: likePct, ratingCount, ratingOpen: true, ratingLocked: false },
+    now: demoNow,
+    isTop: topPartyIds[party.day] === party.id,
+  });
 
   return (
     <AppShell hideBottomNav>
-      <div className="pb-32 lg:pb-32 max-w-xl mx-auto">
-        <div className="pt-2">
-          <DemoBanner weekendOf={weekendOf} />
-        </div>
-        <PartyHero posterImage={party.posterImage} title={party.title} backHref="/demo" />
-
-        <div className="flex flex-col gap-3.5 px-4 pt-4 sm:px-6">
-          <div className="flex items-center gap-2">
-            {party.isHeadliner && (
-              <Pill tone="hyped" size="sm" shape="square" title="Tonight's most popular party">
-                HEADLINER
-              </Pill>
-            )}
-            <Pill tone="accent" size="sm" shape="square">
-              {party.category}
-            </Pill>
+      <PartyPageView
+        party={party}
+        model={model}
+        backHref="/demo"
+        isGoing={isGoing(party.id)}
+        userRating={getUserRating(party.id)}
+        banner={
+          <div className="pt-2">
+            <DemoBanner weekendOf={weekendOf} />
           </div>
-
-          <h1 className="text-white text-[28px] leading-8 font-montserrat font-bold uppercase">
-            {party.title}
-          </h1>
-
-          <HostRow
-            name={party.host}
-            isVerified={party.isVerified}
-            subtitle={hostSubtitle}
-            avatarUrl={party.hostStats?.logoUrl}
-            onShowToast={toast.show}
-          />
-
-          <WhenWhereCard
-            dateLabel={getPartyDateLabel(party.date)}
-            doorsOpen={party.doorsOpen}
-            doorsClose={party.doorsClose}
-            address={party.address}
-            onUnlock={() => undefined}
-            onOpenMap={handleOpenMap}
-          />
-
-          <div className="flex gap-2.5">
-            <StatTile
-              value={coverTileValue(party.ticketPrice, ticketed)}
-              label={ticketed ? 'TICKETS' : 'COVER'}
-            />
-            <StatTile value={String(goingCount)} label="GOING" />
-            <button
-              type="button"
-              onClick={() => handleShare('cta')}
-              aria-label="Share this party"
-              className="flex-1 min-w-0 flex flex-col items-center justify-center gap-[3px] py-3 rounded-[12px] bg-temple-purple-light text-black hover:opacity-90 active:scale-[0.98] transition-all duration-150"
-            >
-              <ShareIcon className="w-4 h-4" />
-              <span className="font-montserrat font-bold text-[9px] tracking-[0.9px] uppercase">
-                SHARE
-              </span>
-            </button>
-          </div>
-
-          {party.promoLabel && (
-            <PromoCard
-              code={party.promoCode}
-              label={party.promoLabel}
-              hint={party.promoHint}
-              onCopied={handlePromoCopied}
-              onSignIn={() => undefined}
-            />
-          )}
-
-          {party.description && (
-            <div className="flex flex-col gap-1.5">
-              <SectionLabel className="!text-[10px] !tracking-[1px]">FROM THE HOST</SectionLabel>
-              <p className="font-montserrat text-[13px] leading-[19px] text-white/70 whitespace-pre-wrap">
-                {party.description}
-              </p>
-            </div>
-          )}
-
-          <RatingPanel
-            likePercentage={likePct}
-            likeCount={votes?.likeCount ?? null}
-            dislikeCount={votes?.dislikeCount ?? null}
-            userRating={userRating}
-            state={windowState}
-            lockCopy={null}
-            onRate={handleRate}
-          />
-        </div>
-      </div>
-
-      <StickyActionBar>
-        <div className="flex-[7] min-w-0 flex">
-          {ticketed ? (
-            <a
-              href={party.ticketUrl!}
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={handleBuyTickets}
-              className="flex-1 min-w-0 py-3 rounded-[10px] bg-temple-purple text-white font-montserrat font-bold text-[14px] uppercase text-center hover:opacity-90 active:scale-[0.98] transition-all duration-150"
-            >
-              BUY TICKETS ↗
-            </a>
-          ) : (
-            <GoingButton
-              currentCount={goingCount}
-              userIsGoing={userIsGoing}
-              onGoingClick={handleGoing}
-              variant="bar"
-            />
-          )}
-        </div>
-        <button
-          type="button"
-          onClick={handleNavigate}
-          aria-label="Navigate"
-          title="Opens walking directions"
-          className="flex-[3] min-h-11 py-3 rounded-[10px] bg-temple-purple-light text-temple-purple flex items-center justify-center hover:opacity-90 active:scale-[0.98] transition-all duration-150"
-        >
-          <NavigateIcon className="w-[18px] h-[18px]" />
-        </button>
-      </StickyActionBar>
+        }
+        onGoing={handleGoing}
+        onNavigate={handleNavigate}
+        onBuyTickets={handleBuyTickets}
+        onRate={handleRate}
+        onShare={handleShare}
+        onPromoCopied={handlePromoCopied}
+        // Demo parties always carry an address, so the gate never shows.
+        onSignIn={() => undefined}
+        onOpenMap={handleOpenMap}
+        onShowToast={toast.show}
+      />
 
       <InviteModal
         isOpen={showInviteModal}

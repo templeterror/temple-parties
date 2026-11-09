@@ -3,7 +3,7 @@
  *
  * The real TUP-12 work is linking last-sem host rows to current host_codes.
  * Until that data connection exists, this allowlist paints a #1 chip on
- * matching host names (feed + party-page HostRow) with no schema change.
+ * matching host names (feed + the party page's host line) with no schema change.
  *
  * Empty LAST_SEMESTER_CHAMPION_HOSTS to turn the overlay off everywhere
  * (same kill switch as lib/sponsors.ts).

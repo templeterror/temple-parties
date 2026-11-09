@@ -10,11 +10,11 @@
 
 | Token | Value | Role |
 |---|---|---|
-| `temple-purple` | `#b24bf3` | Primary. Actions (GOING, tabs, category chips on the hero + detail page), active nav, links. On the compact card GOING is the only purple block |
+| `temple-purple` | `#b24bf3` | Primary. Actions (GOING / `I'm going`, tabs), active nav, links. On the compact card GOING is the only purple block |
 | `temple-purple-light` | `#e0d4ff` | Secondary. Navigate buttons, host lines, cast-vote fill, COPY |
 | `temple-hyped` | `var(--temple-hyped)` = `#FFD60A` | The HEADLINER badge. **The app's ONE glow** — nothing else glows |
 | `temple-hyped-ink` | `var(--temple-hyped-ink)` = `#0a0a0f` | Text on the hyped yellow |
-| `temple-surface` | `#1a1a1d` | Flat modules (the Dock pill, tabs container, detail-page cards) |
+| `temple-surface` | `#1a1a1d` | Flat modules (the Dock pill, tabs container, the party page's grouped list) |
 | `temple-surface-2` | `#252528` | Feed cards (with `border-white/10` hairline) |
 | `temple-muted` | `#9a9a9a` | Secondary text, section labels, idle icons |
 | base | `#000` | Page background |
@@ -33,7 +33,7 @@ together. Everything else is a Tailwind token in `tailwind.config.ts`
   top bar. Bitcount is retired from chrome.
 - **UI font:** Montserrat everywhere in the redesigned surfaces.
 - Card scale (compact card): title 20/24 bold · host 14 · time 14 · votes 14.
-  Hero: title 24 uppercase · host 15. Detail: title 28 uppercase.
+  Hero: title 24 uppercase · host 15. Party page: title 26/30 bold in the host's casing, balanced.
 - Section labels: 10–11px bold, tracking ~1px, uppercase, muted
   (`ui/SectionLabel.tsx`).
 
@@ -42,10 +42,10 @@ together. Everything else is a Tailwind token in `tailwind.config.ts`
 Generic kit in `frontend/src/components/ui/` (heaviest-commented code in the
 repo, per conventions.md): `Pill` (tones: hyped / accent / neutral / overlay;
 chips are `shape="square"` — 4px corners — everywhere), `SegmentedTabs`,
-`StatTile`, `SectionLabel`, `IconButton` (accent = light-purple fill),
+`StatTile` (map sheet), `SectionLabel`,
 `DashedCard`, `StickyActionBar` (z-9000, safe-area padded), `StagePoster`
 (cinema blur-wings, CSS blur on a static img — never backdrop-filter; one per
-page), `VoteArrow` (reddit-style, fills when cast), `VoteRow`, `AddressGate`,
+page; AuthWall), `VoteArrow` (reddit-style, fills when cast), `VoteRow`,
 `VerifiedMark` (one inline-SVG scalloped seal, light purple + black check, 15px;
 exports `VerifiedSealIcon` for the map popup), `CrownIcon` (flat 16px gold crown,
 `currentColor`) + `CrownIllustration` (its jewelled 64px+ sibling: gradient
@@ -54,12 +54,17 @@ gold, faceted peaks, pearl tips, brand-purple gems — hero use only),
 Beside the seal, `LastSemesterChampBadge` is the bare 16px `CrownIcon` (no box,
 no fill, no glow) for last semester's top host — the two are sized as a pair,
 and host rows space them with `gap-1` only. The crown is static on feed cards
-(the card is the tap target) and tappable only on the party-page HostRow, where
-it opens `LastSemesterChampModal`: `CrownIllustration` on a surface disc,
+(the card is the tap target) and tappable only on the party page's host line
+(hit area padded to 44px; when the crown is there the seal beside it stays
+static so the targets don't overlap — without a crown the party-page seal is
+a button whose tap toasts "Verified host"), where it opens `LastSemesterChampModal`: `CrownIllustration` on a surface disc,
 section label, the host's name, one explainer sentence, Ranks CTA, and a ✕.
 
-Party-page pieces in `components/party/`: `PartyHero`, `HostRow`,
-`WhenWhereCard`, `PromoCard`, `RatingPanel`.
+Party-page pieces in `components/party/`, composed by `PartyPageView`
+(shared by `/party/[id]` and its demo twin): `PartyStage`, `PartyInfoPanel`,
+`PartyFactsList`, `PartyRating`, `PartyActionBar`, `PartyIcons` (the page's
+one 20px line-icon set). Rules in `utils/partyPage.ts`, CSS in the "Party
+page" section of `globals.css`.
 
 Map pieces (Figma §13): pins are raw HTML for Leaflet, built in
 `utils/mapPins.ts` and styled in `globals.css`. Two pins — the full-purple
@@ -91,7 +96,11 @@ Philadelphia city lock (`PARTY_ZONE` in `utils/mapHelpers.ts` — Temple,
 Fishtown, Drexel/UCity, Lincoln Financial, Center City).
 Also in the kit:
 `AddressAutocomplete` (shared by create-party + become-host), the
-rankings pieces `RankChampionCard` / `RankingRow` / `HostRankingRow`, and
+Ranks pieces in `components/ranks/` — `RanksPodium` (+ `RanksPodiumPartyStep`
+/ `RanksPodiumHostStep` / `RanksGhostPodium`), `RanksPartyRow` /
+`RanksHostRow`, `RanksList` / `RanksUnrankedGroup`, `RanksPeriodMenu`,
+`RanksEmpty`, `RanksSkeleton` (rules in `utils/ranks.ts`, CSS in the
+"Ranks" section of `globals.css`; composed by `RankingsView`), and
 `HostTonightPrompt` (bottom drawer that replaces the mobile Dock,
 same as `PartySheet` on the map; hosts/admins once per day Wed–Sat,
 everyone else once on Friday; swipe down or Escape to dismiss — no ✕;
@@ -161,17 +170,36 @@ walk, price, `formatGoing`) are tested in `__tests__/partyDeck.test.ts`.
 Analytics: `deck_card_viewed { partyId, rank, day }` once per card per
 day-view, plus the page's existing events.
 
-## Party detail page (WF-D)
+## Party detail page
 
-Pushed route: back arrow over the hero, no mobile Dock
-(`AppShell hideBottomNav`), sticky action bar (GOING 70% / navigate 30%;
-ticketed = GOING outline + BUY TICKETS primary). Order: hero → tags
-(`HEADLINER` when `isHeadliner`, category) → title → HostRow (cred line from
-the leaderboard RPC when host_codes are linked) → WhenWhereCard (date · time
-· address stacked; map button deep-links `/map?party=<id>`; logged-out sees
-"Log in to view address") → StatTiles (COVER/TICKETS · GOING · SHARE) → PromoCard →
-FROM THE HOST → RatingPanel (inline vote buttons; going-only enforced
-server-side, surfaced as toast, never preached in copy) → sticky bar.
+Spec in the 2026-11-09 "Party page → Deck" decision row: the DeckCard grown
+up. Pushed route — no mobile Dock (`AppShell hideBottomNav`). Presentation is
+`components/party/PartyPageView`; the page files own data, handlers and
+analytics. Pure rules in `utils/partyPage.ts` (reusing `utils/partyDeck.ts`
+for phase in ET, walk, price, going), tested in `__tests__/partyPage.test.ts`.
+
+- **Stage**: the whole flyer (`object-contain`) on blurred wings of itself,
+  ≤ 60svh, masked into the black page; no poster → the Deck's typographic
+  tile. 44px solid back disc (home, or `/demo`).
+- **Info panel**: Quiet eyebrow (`#1 tonight` / `#1 Saturday` yellow text
+  only for the top party while live or upcoming — `isHeadliner` from
+  `GET /parties/{id}`, the demo session's top id in the demo · category caps,
+  `Other` hidden), title (26px, host casing, balanced), host line (static
+  seal, tappable crown, `90% liked · 9 parties` only with `hostStats`), facts
+  line (`Doors 10 PM` / `Live now` / `Ended` · price · walk).
+- **One grouped list** (`temple-surface`, inset hairlines): When (date + what
+  the facts line left out — `until 2 AM` upcoming, `10 PM–2 AM` live/ended),
+  Where (address + `Open in map` → `/map?party=<id>`; logged out this row is
+  the ONE gate: one sentence, one Sign in, unlocking address + promo code),
+  `Tickets on posh.vip ↗` (ticketed only), promo (code + Copy → ✓ 1.5s),
+  Going (`186 going` / `went`, `—` soft-gated). No number appears twice.
+- **From the host** (15/22, ≤ 65ch), then **rating** by the server's window:
+  before doors one line (`Voting opens when doors open`); open (doors →
+  Monday 11:59 PM ET lock) result + vote buttons; locked result + `Voting
+  closed`. Going-only is a toast on attempt, never copy.
+- **Sticky bar** (`StickyActionBar`): the ONE primary (`I'm going` /
+  `Going ✓`, or `Buy tickets ↗` when ticketed) + 44px outlined directions +
+  share; Share alone once the party is over and voting has closed.
 
 ## System rules
 
@@ -240,3 +268,5 @@ server-side, surfaced as toast, never preached in copy) → sticky bar.
 | 2026-11-07 | **Feed sponsor slide off** (owner: "we don't need it"). The SponsorSlide and its `Ad` marker are commented out (not deleted) at the `sponsor` prop in `app/page.tsx` and `app/demo/page.tsx`; restore by uncommenting. Map sponsor pin and SponsorReminderModal are unchanged. Supersedes the sponsor-as-slide part of the Deck row. |
 | 2026-11-08 | Deck cards label the party by **category chip** instead of `#N of M` (owner). Rank lives in the rank strip; the top party keeps `#1 tonight` in front of its category chip. Category chip: party-page tag metrics (4px corners, 11px bold uppercase), `temple-purple`, muted on past nights. |
 | 2026-11-08 | **Deck card labels → Quiet** (owner, from `/proto/chips`, 4 variants). No containers: the category is a muted 12px semibold caps eyebrow (tracking 0.08em, `temple-muted`; `white/50` on past nights), and the top party gets yellow `#1 tonight` text (bold, `temple-hyped` as a text colour only — no box, no glow; `white/60` on past nights) joined by a middle dot. Category `Other` shows no label. Weakest label contrast 5.3:1. **Rejected:** *Current* purple chips (white on `#b24bf3` = 4.04:1, fails 4.5:1; three loud blocks with the I'm going button); *Outline* ghost pills (read as tappable next to the outlined directions/Details buttons; breaks the 4px chip rule); *On-flyer* corner tags (+30px flyer, but cover the host's own header text on most posters). Supersedes the 2026-11-08 category-chip row. |
+| 2026-11-09 | **Ranks → Podium** (owner, from `/proto/ranks`, 4 variants; audit in `ranks-audit.md`). Page title `Ranks` (matches the Dock). One compact period menu in the header row — still ONE control (08-17 call kept) — with real menu semantics (aria-haspopup/expanded, arrows, Home/End, Escape returns focus, click-outside closes); by-hosts adds a sibling `How host ranking works` button for `HostRankingInfoModal`. Top 3 on a podium: #2 left · #1 centre (≈40% width) · #3 right, each flyer whole at 4:5 standing on a quiet `temple-surface` step with a white numeral, steps on one baseline, captions a fixed 2-line title slot + `91%` over `64 votes`; #1 gets yellow `#1 last weekend` text (period-aware; text colour only, no box, no glow). DOM order = visual order (2 · 1 · 3), each step a link that announces its rank. Hosts: monogram plates (logo when present) instead of flyers, `#1 host`. From #4: bare rows on black with solid hairlines — rank numeral (legible, tabular), 44px 4:5 flyer thumb, title (host casing, 2-line clamp, balanced), `host ✓ · date`, `%` over `N votes`. Unranked parties (<5 votes) and ineligible hosts get their own labelled group (`Not enough votes yet · Needs 5 votes to rank` / `Not ranked yet · Needs 2 parties and 15 votes`) — never opacity-dimmed. Empty: the podium's footprint as empty steps + `No votes yet for <period>. Voting opens when doors do.` + a button to the next view. Motion: steps rise #3 → #2 → #1 (200ms, 40ms apart, `cubic-bezier(0.23,1,0.32,1)`), replays on period change; menu 150ms; press 0.97; all off under reduced motion. **Rejected:** *Current* (15 boxed cards, ranks 4+ at ~2:1 contrast, unlabelled `(64)`, dimmed under-threshold rows mid-list, no flyers); *Chart* (densest and a real desktop table, but flyers demoted to 56px thumbs — the same reason *Ranked* lost on 11-07 — and least celebratory); *Wall* (flyer grid, ~2 parties per phone screen, ranking reads slowly). Supersedes the 2026-08-17 Rankings row (champion hero card, medal colours, rows as linked cards). |
+| 2026-11-09 | **Party page → Deck** (owner, from `/proto/party`, 4 variants; audit in `party-page-audit.md`). The page is the DeckCard grown up. Hero: the whole flyer (`object-contain`, never cropped) on blurred wings of itself, ≤ 60svh, fading into the page; no-poster → the Deck's typographic tile; 44px solid back disc. Then the card's info panel: Quiet eyebrow (`#1 tonight` yellow text only on live/upcoming top party · muted category caps, `Other` hidden), title (~26px, host casing, balanced — no forced uppercase), host line (seal, crown, `90% liked · 9 parties` only with hostStats), the Deck facts line (`Doors 10 PM` / `Live now` / `Ended` · price · walk). Then ONE grouped `temple-surface` list with hairlines and one 20px line-icon set, carrying only what the facts line doesn't: When (date + the time the facts line left out — `until 2 AM` upcoming, `10 PM–2 AM` live/ended), Where (address + `Open in map`; logged out this row IS the single gate: one sentence + one Sign in), ticket site row (`Tickets on posh.vip ↗`, ticketed only), promo row (code + Copy → ✓ for 1.5s), Going (`186 going` / `went`). No number appears twice. `From the host` (15/22, ≤65ch). Rating follows the server window, not the night: upcoming one line (`Voting opens when doors open`); doors open → Monday 11:59 PM ET vote buttons + result (so morning-after votes still land, even once the night reads `Ended`); after that the result + `Voting closed`. Sticky bar (`StickyActionBar`, solid, safe-area) = the card's controls: the ONE primary (`I'm going` / `Going ✓`, or `Buy tickets ↗` when ticketed), 44px outlined directions, 44px outlined share; once voting closes → Share only (while votes are still open after the night, `I'm going` stays, since the vote guard points at it). **Rejected:** *Current* (three filled blocks — SHARE tile, GOING, navigate; 186 twice; purple `OTHER` chip at 4.04:1; two separate sign-in gates); *Ticket* (2×2 fact ticket with perforated promo stub, two columns on desktop — most chrome, Share demoted to a text button, mask notches need Safari care); *Poster* (full-screen flyer under a scrolling sheet — most immersive, but scroll-linked motion is phone-dependent and a no-poster party shows its title twice). Supersedes the WF-D "Party detail page" order (tag chips, HostRow card, WhenWhereCard, StatTiles, 70/30 bar) and the 2026-08-21 SHARE-tile row. |

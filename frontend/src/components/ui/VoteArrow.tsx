@@ -1,6 +1,6 @@
 /**
  * VoteArrow — the reddit-style vote arrow (chunky arrow with a stem) used
- * by VoteRow and the party-page rating panel.
+ * by VoteRow and the party page's vote buttons.
  *
  * Two states: outline at rest, and FILLED once it's your vote — the fill
  * takes currentColor, and the callers set that to the secondary light

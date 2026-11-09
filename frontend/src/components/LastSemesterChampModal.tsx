@@ -3,7 +3,7 @@
 /**
  * LastSemesterChampModal — what the crown next to a host's name means.
  *
- * Opens from the tappable crown on the party-page HostRow. The hero is the
+ * Opens from the tappable crown on the party page's host line. The hero is the
  * jewelled CrownIllustration — same silhouette as the 16px CrownIcon you just
  * tapped, drawn with the detail a hero can afford — on a surface disc, then a
  * tracked section label, the host's name as the headline, one sentence of

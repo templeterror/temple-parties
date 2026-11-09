@@ -7,10 +7,11 @@
  *
  * Reads top to bottom the way a student decides:
  *   poster + tags + title + who's hosting
- *   → the party page's stat row, map edition: COVER / STARTS / SHARE
+ *   → the WF-D party page's stat row, map edition: COVER / STARTS / SHARE
  *   → where (address, gated for logged-out) beside the read-only votes
- *   → GOING (the count lives on the button) + navigate, same pair as the
- *     party page's sticky bar.
+ *   → GOING (the count lives on the button) + navigate, the pair the WF-D
+ *     party page's sticky bar had (the page itself moved to the Deck
+ *     language on 2026-11-09; the sheet keeps its own layout).
  *
  * Gestures: drag the sheet down past ~90px to close it; drag it up ~150px
  * to push the full party page (a short flick is not enough). Tap the header
